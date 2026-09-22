@@ -26,10 +26,8 @@ class AtividadeBase(BaseModel):
         "alta"
     ] = "media"
 
-
     @model_validator(mode="after")
     def validar_horarios(self):
-
         if (
             self.hora_fim is not None
             and self.hora_fim <= self.hora_inicio
@@ -45,8 +43,31 @@ class AtividadeCreate(AtividadeBase):
     pass
 
 
-class AtividadeResponse(AtividadeBase):
+class AtividadeUpdate(BaseModel):
+    titulo: str | None = Field(
+        default=None,
+        min_length=3,
+        max_length=120
+    )
 
+    descricao: str | None = None
+
+    categoria: str | None = None
+
+    data: date | None = None
+
+    hora_inicio: time | None = None
+
+    hora_fim: time | None = None
+
+    prioridade: Literal[
+        "baixa",
+        "media",
+        "alta"
+    ] | None = None
+
+
+class AtividadeResponse(AtividadeBase):
     id: int
 
     concluida: bool
