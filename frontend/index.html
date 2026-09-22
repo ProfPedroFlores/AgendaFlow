@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AgendaFlow</title>
+
+    <link rel="stylesheet" href="/static/css/style.css">
+
+</head>
+
+<body>
+
+    <header class="cabecalho">
+
+        <div>
+            <h1>AgendaFlow</h1>
+            <p>Organize suas atividades e seu tempo.</p>
+        </div>
+
+    </header>
+
+
+    <main class="container">
+
+        <section class="painel-formulario">
+
+            <h2>Nova atividade</h2>
+
+            <form id="form-atividade">
+
+                <div class="campo">
+
+                    <label for="titulo">
+                        Título
+                    </label>
+
+                    <input type="text" id="titulo" name="titulo" required minlength="3" maxlength="120">
+
+                </div>
+
+
+                <div class="campo">
+
+                    <label for="descricao">
+                        Descrição
+                    </label>
+
+                    <textarea id="descricao" name="descricao" rows="3"></textarea>
+
+                </div>
+
+
+                <div class="linha-formulario">
+
+                    <div class="campo">
+
+                        <label for="categoria">
+                            Categoria
+                        </label>
+
+                        <select id="categoria" name="categoria">
+                            <option value="Pessoal">
+                                Pessoal
+                            </option>
+
+                            <option value="Trabalho">
+                                Trabalho
+                            </option>
+
+                            <option value="Mestrado">
+                                Mestrado
+                            </option>
+
+                            <option value="Aula">
+                                Aula
+                            </option>
+
+                            <option value="Tutoria">
+                                Tutoria
+                            </option>
+                        </select>
+
+                    </div>
+
+
+                    <div class="campo">
+
+                        <label for="prioridade">
+                            Prioridade
+                        </label>
+
+                        <select id="prioridade" name="prioridade">
+                            <option value="baixa">
+                                Baixa
+                            </option>
+
+                            <option value="media" selected>
+                                Média
+                            </option>
+
+                            <option value="alta">
+                                Alta
+                            </option>
+                        </select>
+
+                    </div>
+
+                </div>
+
+
+                <div class="linha-formulario">
+
+                    <div class="campo">
+
+                        <label for="data">
+                            Data
+                        </label>
+
+                        <input type="date" id="data" name="data" required>
+
+                    </div>
+
+
+                    <div class="campo">
+
+                        <label for="hora_inicio">
+                            Início
+                        </label>
+
+                        <input type="time" id="hora_inicio" name="hora_inicio" required>
+
+                    </div>
+
+
+                    <div class="campo">
+
+                        <label for="hora_fim">
+                            Fim
+                        </label>
+
+                        <input type="time" id="hora_fim" name="hora_fim">
+
+                    </div>
+
+                </div>
+
+
+                <button type="submit" id="botao-salvar" class="botao-principal">
+                    Adicionar atividade
+                </button>
+
+                <button type="button" id="botao-cancelar-edicao" class="botao-secundario" hidden>
+                    Cancelar edição
+                </button>
+
+
+                <p id="mensagem" class="mensagem"></p>
+
+            </form>
+
+        </section>
+
+
+        <section class="painel-atividades">
+
+            <div class="titulo-secao">
+
+                <div>
+                    <h2>Minhas atividades</h2>
+
+                    <p>
+                        Atividades cadastradas no AgendaFlow.
+                    </p>
+                </div>
+
+                <span id="contador-atividades">
+                    0 atividades
+                </span>
+
+            </div>
+
+
+            <div id="lista-atividades" class="lista-atividades">
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <script src="/static/js/app.js"></script>
+
+</body>
+
+</html>
