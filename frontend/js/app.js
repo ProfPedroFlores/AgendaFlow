@@ -16,6 +16,35 @@ const botaoSalvar =
 const botaoCancelarEdicao =
     document.querySelector("#botao-cancelar-edicao");
 
+const agendaSemana =
+    document.querySelector("#agenda-semana");
+
+const periodoSemana =
+    document.querySelector("#periodo-semana");
+
+const botaoSemanaAnterior =
+    document.querySelector("#semana-anterior");
+
+const botaoSemanaAtual =
+    document.querySelector("#semana-atual");
+
+const botaoSemanaProxima =
+    document.querySelector("#semana-proxima");
+
+
+const HORA_INICIAL = 6;
+
+const HORA_FINAL = 24;
+
+const ALTURA_HORA = 56;
+
+
+let atividadesCarregadas = [];
+
+let inicioSemanaExibida =
+    obterInicioSemana(
+        new Date()
+    );
 
 let atividadeEmEdicao = null;
 
@@ -45,7 +74,16 @@ async function carregarAtividades() {
             await resposta.json();
 
 
+        atividadesCarregadas =
+            atividades;
+
+
         exibirAtividades(
+            atividades
+        );
+
+
+        renderizarAgendaSemanal(
             atividades
         );
 
@@ -75,10 +113,9 @@ function exibirAtividades(atividades) {
 
 
     contadorAtividades.textContent =
-        `${atividades.length} atividade${
-            atividades.length === 1
-                ? ""
-                : "s"
+        `${atividades.length} atividade${atividades.length === 1
+            ? ""
+            : "s"
         }`;
 
 
@@ -793,7 +830,702 @@ async function excluirAtividade(id) {
 
 }
 
+function obterInicioSemana(data) {
 
+    const resultado =
+        new Date(
+            data.getFullYear(),
+            data.getMonth(),
+            data.getDate()
+        );
+
+
+    const diaSemana =
+        resultado.getDay();
+
+
+    const deslocamento =
+        diaSemana === 0
+            ? -6
+            : 1 - diaSemana;
+
+
+    resultado.setDate(
+        resultado.getDate()
+        + deslocamento
+    );
+
+
+    return resultado;
+
+}
+
+function adicionarDias(
+    data,
+    quantidade
+) {
+
+    const resultado =
+        new Date(
+            data.getFullYear(),
+            data.getMonth(),
+            data.getDate()
+        );
+
+
+    resultado.setDate(
+        resultado.getDate()
+        + quantidade
+    );
+
+
+    return resultado;
+
+}
+
+function dataParaISO(data) {
+
+    const ano =
+        data.getFullYear();
+
+
+    const mes =
+        String(
+            data.getMonth() + 1
+        ).padStart(
+            2,
+            "0"
+        );
+
+
+    const dia =
+        String(
+            data.getDate()
+        ).padStart(
+            2,
+            "0"
+        );
+
+
+    return `${ano}-${mes}-${dia}`;
+
+}
+
+function formatarPeriodoSemana(
+    inicio
+) {
+
+    const fim =
+        adicionarDias(
+            inicio,
+            6
+        );
+
+
+    const inicioFormatado =
+        inicio.toLocaleDateString(
+            "pt-BR",
+            {
+                day: "2-digit",
+                month: "short"
+            }
+        );
+
+
+    const fimFormatado =
+        fim.toLocaleDateString(
+            "pt-BR",
+            {
+                day: "2-digit",
+                month: "short",
+                year: "numeric"
+            }
+        );
+
+
+    return `${inicioFormatado} — ${fimFormatado}`;
+
+}
+
+function renderizarAgendaSemanal(
+    atividades
+) {
+
+    agendaSemana.innerHTML = "";
+
+
+    periodoSemana.textContent =
+        formatarPeriodoSemana(
+            inicioSemanaExibida
+        );
+
+
+    const grade =
+        document.createElement("div");
+
+
+    grade.className =
+        "agenda-grade";
+
+
+    const alturaTotal =
+        (
+            HORA_FINAL
+            - HORA_INICIAL
+        )
+        * ALTURA_HORA;
+
+
+    grade.style.setProperty(
+        "--altura-agenda",
+        `${alturaTotal}px`
+    );
+
+
+    grade.style.setProperty(
+        "--altura-hora",
+        `${ALTURA_HORA}px`
+    );
+
+
+    const canto =
+        document.createElement("div");
+
+
+    canto.className =
+        "agenda-canto";
+
+
+    canto.textContent =
+        "Horário";
+
+
+    grade.appendChild(
+        canto
+    );
+
+
+    const diasSemana = [];
+
+
+    for (
+        let indice = 0;
+        indice < 7;
+        indice++
+    ) {
+
+        const data =
+            adicionarDias(
+                inicioSemanaExibida,
+                indice
+            );
+
+
+        diasSemana.push(
+            data
+        );
+
+
+        const cabecalho =
+            criarCabecalhoDia(
+                data
+            );
+
+
+        grade.appendChild(
+            cabecalho
+        );
+
+    }
+
+
+    const colunaHoras =
+        criarColunaHoras();
+
+
+    grade.appendChild(
+        colunaHoras
+    );
+
+
+    const colunasDias = [];
+
+
+    diasSemana.forEach(
+        data => {
+
+            const coluna =
+                document.createElement(
+                    "div"
+                );
+
+
+            coluna.className =
+                "agenda-dia-coluna";
+
+
+            coluna.dataset.data =
+                dataParaISO(
+                    data
+                );
+
+
+            if (
+                dataParaISO(data)
+                === dataParaISO(new Date())
+            ) {
+
+                coluna.classList.add(
+                    "hoje"
+                );
+
+            }
+
+
+            colunasDias.push(
+                coluna
+            );
+
+
+            grade.appendChild(
+                coluna
+            );
+
+        }
+    );
+
+
+    atividades.forEach(
+        atividade => {
+
+            const indiceDia =
+                diasSemana.findIndex(
+                    data =>
+                        dataParaISO(data)
+                        === atividade.data
+                );
+
+
+            if (indiceDia === -1) {
+
+                return;
+
+            }
+
+
+            const bloco =
+                criarBlocoAgenda(
+                    atividade
+                );
+
+
+            if (bloco !== null) {
+
+                colunasDias[
+                    indiceDia
+                ].appendChild(
+                    bloco
+                );
+
+            }
+
+        }
+    );
+
+
+    agendaSemana.appendChild(
+        grade
+    );
+
+}
+
+function criarCabecalhoDia(data) {
+
+    const cabecalho =
+        document.createElement("div");
+
+
+    cabecalho.className =
+        "agenda-dia-cabecalho";
+
+
+    if (
+        dataParaISO(data)
+        === dataParaISO(new Date())
+    ) {
+
+        cabecalho.classList.add(
+            "hoje"
+        );
+
+    }
+
+
+    const nome =
+        document.createElement("span");
+
+
+    nome.className =
+        "agenda-dia-nome";
+
+
+    nome.textContent =
+        data.toLocaleDateString(
+            "pt-BR",
+            {
+                weekday: "short"
+            }
+        ).replace(
+            ".",
+            ""
+        );
+
+
+    const numero =
+        document.createElement("span");
+
+
+    numero.className =
+        "agenda-dia-data";
+
+
+    numero.textContent =
+        data.toLocaleDateString(
+            "pt-BR",
+            {
+                day: "2-digit",
+                month: "2-digit"
+            }
+        );
+
+
+    cabecalho.appendChild(
+        nome
+    );
+
+
+    cabecalho.appendChild(
+        numero
+    );
+
+
+    return cabecalho;
+
+}
+
+function criarColunaHoras() {
+
+    const coluna =
+        document.createElement("div");
+
+
+    coluna.className =
+        "agenda-horas";
+
+
+    for (
+        let hora = HORA_INICIAL;
+        hora < HORA_FINAL;
+        hora++
+    ) {
+
+        const marcador =
+            document.createElement("span");
+
+
+        marcador.className =
+            "agenda-hora";
+
+
+        marcador.textContent =
+            `${String(hora).padStart(
+                2,
+                "0"
+            )}:00`;
+
+
+        marcador.style.top =
+            `${
+                (
+                    hora
+                    - HORA_INICIAL
+                )
+                * ALTURA_HORA
+            }px`;
+
+
+        coluna.appendChild(
+            marcador
+        );
+
+    }
+
+
+    return coluna;
+
+}
+
+function horarioParaMinutos(
+    horario
+) {
+
+    const [
+        hora,
+        minuto
+    ] = horario
+        .split(":")
+        .map(Number);
+
+
+    return (
+        hora * 60
+        + minuto
+    );
+
+}
+
+function criarBlocoAgenda(
+    atividade
+) {
+
+    const inicio =
+        horarioParaMinutos(
+            atividade.hora_inicio
+        );
+
+
+    let fim;
+
+
+    if (atividade.hora_fim) {
+
+        fim =
+            horarioParaMinutos(
+                atividade.hora_fim
+            );
+
+    } else {
+
+        fim =
+            inicio + 60;
+
+    }
+
+
+    const limiteInicial =
+        HORA_INICIAL * 60;
+
+
+    const limiteFinal =
+        HORA_FINAL * 60;
+
+
+    const inicioVisivel =
+        Math.max(
+            inicio,
+            limiteInicial
+        );
+
+
+    const fimVisivel =
+        Math.min(
+            fim,
+            limiteFinal
+        );
+
+
+    if (
+        fimVisivel <= limiteInicial
+        ||
+        inicioVisivel >= limiteFinal
+    ) {
+
+        return null;
+
+    }
+
+
+    const minutosDesdeInicio =
+        inicioVisivel
+        - limiteInicial;
+
+
+    const duracao =
+        fimVisivel
+        - inicioVisivel;
+
+
+    const topo =
+        (
+            minutosDesdeInicio
+            / 60
+        )
+        * ALTURA_HORA;
+
+
+    const altura =
+        Math.max(
+            (
+                duracao
+                / 60
+            )
+            * ALTURA_HORA,
+
+            32
+        );
+
+
+    const bloco =
+        document.createElement(
+            "button"
+        );
+
+
+    bloco.type =
+        "button";
+
+
+    bloco.className =
+        "agenda-evento";
+
+
+    if (atividade.concluida) {
+
+        bloco.classList.add(
+            "concluida"
+        );
+
+    }
+
+
+    bloco.style.top =
+        `${topo}px`;
+
+
+    bloco.style.height =
+        `${altura}px`;
+
+
+    const titulo =
+        document.createElement(
+            "strong"
+        );
+
+
+    titulo.textContent =
+        atividade.titulo;
+
+
+    const horario =
+        document.createElement(
+            "span"
+        );
+
+
+    horario.textContent =
+        `${formatarHora(
+            atividade.hora_inicio
+        )} - ${
+            formatarHora(
+                atividade.hora_fim
+            )
+        }`;
+
+
+    const categoria =
+        document.createElement(
+            "span"
+        );
+
+
+    categoria.textContent =
+        atividade.categoria;
+
+
+    bloco.appendChild(
+        titulo
+    );
+
+
+    bloco.appendChild(
+        horario
+    );
+
+
+    bloco.appendChild(
+        categoria
+    );
+
+
+    bloco.title =
+        `${atividade.titulo} — clique para editar`;
+
+
+    bloco.addEventListener(
+        "click",
+        () =>
+            iniciarEdicao(
+                atividade
+            )
+    );
+
+
+    return bloco;
+
+}
+
+botaoSemanaAnterior.addEventListener(
+    "click",
+    () => {
+
+        inicioSemanaExibida =
+            adicionarDias(
+                inicioSemanaExibida,
+                -7
+            );
+
+
+        renderizarAgendaSemanal(
+            atividadesCarregadas
+        );
+
+    }
+);
+
+botaoSemanaProxima.addEventListener(
+    "click",
+    () => {
+
+        inicioSemanaExibida =
+            adicionarDias(
+                inicioSemanaExibida,
+                7
+            );
+
+
+        renderizarAgendaSemanal(
+            atividadesCarregadas
+        );
+
+    }
+);
+
+botaoSemanaAtual.addEventListener(
+    "click",
+    () => {
+
+        inicioSemanaExibida =
+            obterInicioSemana(
+                new Date()
+            );
+
+
+        renderizarAgendaSemanal(
+            atividadesCarregadas
+        );
+
+    }
+);
 // ===============================
 // INICIALIZAÇÃO
 // ===============================
