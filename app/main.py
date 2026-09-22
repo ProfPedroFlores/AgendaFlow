@@ -1,3 +1,8 @@
+from pathlib import Path
+
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
 from fastapi import Depends, FastAPI, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
@@ -19,12 +24,24 @@ app = FastAPI(
     version="0.1.0"
 )
 
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-@app.get("/")
-def inicio():
-    return {
-        "mensagem": "AgendaFlow está funcionando!"
-    }
+FRONTEND_DIR = BASE_DIR / "frontend"
+
+app.mount(
+    "/static",
+    StaticFiles(directory=FRONTEND_DIR),
+    name="static"
+)
+
+@app.get(
+    "/",
+    include_in_schema=False
+)
+def pagina_inicial():
+    return FileResponse(
+        FRONTEND_DIR / "index.html"
+    )
 
 
 def buscar_atividade_por_id(
@@ -45,6 +62,12 @@ def buscar_atividade_por_id(
 
     return atividade
 
+
+@app.get("/status")
+def status_api():
+    return {
+        "mensagem": "AgendaFlow está funcionando!"
+    }
 
 @app.post(
     "/atividades",
