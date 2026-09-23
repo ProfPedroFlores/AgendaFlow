@@ -1,5 +1,4 @@
-const form =
-    document.querySelector("#form-atividade");
+const form = document.querySelector("#form-atividade");
 
 const listaAtividades =
     document.querySelector("#lista-atividades");
@@ -32,48 +31,33 @@ const botaoSemanaProxima =
     document.querySelector("#semana-proxima");
 
 const filtroCategoria =
-    document.querySelector(
-        "#filtro-categoria"
-    );
-
+    document.querySelector("#filtro-categoria");
 
 const filtroPrioridade =
-    document.querySelector(
-        "#filtro-prioridade"
-    );
-
+    document.querySelector("#filtro-prioridade");
 
 const filtroStatus =
-    document.querySelector(
-        "#filtro-status"
-    );
-
+    document.querySelector("#filtro-status");
 
 const botaoLimparFiltros =
-    document.querySelector(
-        "#limpar-filtros"
-    );
+    document.querySelector("#limpar-filtros");
+
 
 const HORA_INICIAL = 6;
-
 const HORA_FINAL = 24;
-
 const ALTURA_HORA = 56;
 
 
+let atividadeEmEdicao = null;
 let atividadesCarregadas = [];
 
 let inicioSemanaExibida =
-    obterInicioSemana(
-        new Date()
-    );
-
-let atividadeEmEdicao = null;
+    obterInicioSemana(new Date());
 
 
-// ===============================
-// GET - LISTAR ATIVIDADES
-// ===============================
+// =====================================================
+// API - CARREGAR ATIVIDADES
+// =====================================================
 
 async function carregarAtividades() {
 
@@ -86,7 +70,7 @@ async function carregarAtividades() {
         if (!resposta.ok) {
 
             throw new Error(
-                "Não foi possível carregar as atividades."
+                `Erro ${resposta.status} ao carregar atividades.`
             );
 
         }
@@ -99,33 +83,20 @@ async function carregarAtividades() {
         atividadesCarregadas =
             atividades;
 
+
         aplicarFiltros();
 
 
     } catch (erro) {
 
         console.error(
+            "Erro em carregarAtividades:",
             erro
         );
 
 
-        listaAtividades.textContent =
-            "Erro ao carregar atividades.";
+        listaAtividades.innerHTML = "";
 
-    }
-
-}
-
-
-// ===============================
-// EXIBIR ATIVIDADES
-// ===============================
-
-function exibirAtividades(atividades) {
-
-    listaAtividades.innerHTML = "";
-
-    if (atividades.length === 0) {
 
         const aviso =
             document.createElement("div");
@@ -136,7 +107,186 @@ function exibirAtividades(atividades) {
 
 
         aviso.textContent =
-            "Nenhuma atividade cadastrada.";
+            "Erro ao carregar as atividades.";
+
+
+        listaAtividades.appendChild(
+            aviso
+        );
+
+
+        if (agendaSemana) {
+
+            agendaSemana.innerHTML =
+                "<p>Não foi possível carregar a agenda.</p>";
+
+        }
+
+    }
+
+}
+
+
+// =====================================================
+// FILTROS
+// =====================================================
+
+function obterAtividadesFiltradas() {
+
+    const categoriaSelecionada =
+        filtroCategoria.value;
+
+    const prioridadeSelecionada =
+        filtroPrioridade.value;
+
+    const statusSelecionado =
+        filtroStatus.value;
+
+
+    return atividadesCarregadas.filter(
+        atividade => {
+
+            if (
+                categoriaSelecionada
+                &&
+                atividade.categoria
+                !== categoriaSelecionada
+            ) {
+
+                return false;
+
+            }
+
+
+            if (
+                prioridadeSelecionada
+                &&
+                atividade.prioridade
+                !== prioridadeSelecionada
+            ) {
+
+                return false;
+
+            }
+
+
+            if (
+                statusSelecionado === "pendentes"
+                &&
+                atividade.concluida
+            ) {
+
+                return false;
+
+            }
+
+
+            if (
+                statusSelecionado === "concluidas"
+                &&
+                !atividade.concluida
+            ) {
+
+                return false;
+
+            }
+
+
+            return true;
+
+        }
+    );
+
+}
+
+
+function aplicarFiltros() {
+
+    const atividadesFiltradas =
+        obterAtividadesFiltradas();
+
+
+    exibirAtividades(
+        atividadesFiltradas
+    );
+
+
+    renderizarAgendaSemanal(
+        atividadesFiltradas
+    );
+
+
+    atualizarContador(
+        atividadesFiltradas.length,
+        atividadesCarregadas.length
+    );
+
+}
+
+
+function atualizarContador(
+    quantidadeFiltrada,
+    quantidadeTotal
+) {
+
+    if (
+        quantidadeFiltrada
+        === quantidadeTotal
+    ) {
+
+        contadorAtividades.textContent =
+            `${quantidadeTotal} atividade${quantidadeTotal === 1
+                ? ""
+                : "s"
+            }`;
+
+
+        return;
+
+    }
+
+
+    contadorAtividades.textContent =
+        `${quantidadeFiltrada} de ${quantidadeTotal} atividades`;
+
+}
+
+
+// =====================================================
+// LISTA DE ATIVIDADES
+// =====================================================
+
+function exibirAtividades(
+    atividades
+) {
+
+    listaAtividades.innerHTML = "";
+
+
+    if (
+        atividades.length === 0
+    ) {
+
+        const aviso =
+            document.createElement("div");
+
+
+        aviso.className =
+            "sem-atividades";
+
+
+        const existemFiltros =
+            filtroCategoria.value
+            ||
+            filtroPrioridade.value
+            ||
+            filtroStatus.value !== "todas";
+
+
+        aviso.textContent =
+            existemFiltros
+                ? "Nenhuma atividade corresponde aos filtros selecionados."
+                : "Nenhuma atividade cadastrada.";
 
 
         listaAtividades.appendChild(
@@ -167,38 +317,10 @@ function exibirAtividades(atividades) {
 
 }
 
-function atualizarContador(
-    quantidadeFiltrada,
-    quantidadeTotal
+
+function criarCardAtividade(
+    atividade
 ) {
-
-    if (
-        quantidadeFiltrada
-        === quantidadeTotal
-    ) {
-
-        contadorAtividades.textContent =
-            `${quantidadeTotal} atividade${quantidadeTotal === 1
-                ? ""
-                : "s"
-            }`;
-
-
-        return;
-
-    }
-
-
-    contadorAtividades.textContent =
-        `${quantidadeFiltrada} de ${quantidadeTotal} atividades`;
-
-}
-
-// ===============================
-// CRIAR CARD
-// ===============================
-
-function criarCardAtividade(atividade) {
 
     const card =
         document.createElement("article");
@@ -208,7 +330,9 @@ function criarCardAtividade(atividade) {
         "atividade";
 
 
-    if (atividade.concluida) {
+    if (
+        atividade.concluida
+    ) {
 
         card.classList.add(
             "atividade-concluida"
@@ -288,6 +412,51 @@ function criarCardAtividade(atividade) {
         ${formatarHora(atividade.hora_fim)}`;
 
 
+    card.appendChild(
+        cabecalho
+    );
+
+
+    card.appendChild(
+        categoria
+    );
+
+
+    card.appendChild(
+        descricao
+    );
+
+
+    card.appendChild(
+        data
+    );
+
+
+    if (
+        atividadeTemConflito(
+            atividade
+        )
+    ) {
+
+        const avisoConflito =
+            document.createElement("p");
+
+
+        avisoConflito.className =
+            "aviso-conflito";
+
+
+        avisoConflito.textContent =
+            "Conflito de horário";
+
+
+        card.appendChild(
+            avisoConflito
+        );
+
+    }
+
+
     const acoes =
         document.createElement("div");
 
@@ -295,8 +464,6 @@ function criarCardAtividade(atividade) {
     acoes.className =
         "acoes-atividade";
 
-
-    // BOTÃO CONCLUIR
 
     const botaoConcluir =
         document.createElement("button");
@@ -328,8 +495,6 @@ function criarCardAtividade(atividade) {
     );
 
 
-    // BOTÃO EDITAR
-
     const botaoEditar =
         document.createElement("button");
 
@@ -353,8 +518,6 @@ function criarCardAtividade(atividade) {
         )
     );
 
-
-    // BOTÃO EXCLUIR
 
     const botaoExcluir =
         document.createElement("button");
@@ -396,26 +559,6 @@ function criarCardAtividade(atividade) {
 
 
     card.appendChild(
-        cabecalho
-    );
-
-
-    card.appendChild(
-        categoria
-    );
-
-
-    card.appendChild(
-        descricao
-    );
-
-
-    card.appendChild(
-        data
-    );
-
-
-    card.appendChild(
         acoes
     );
 
@@ -425,11 +568,13 @@ function criarCardAtividade(atividade) {
 }
 
 
-// ===============================
-// FORMATAR DATA
-// ===============================
+// =====================================================
+// DATAS E HORÁRIOS
+// =====================================================
 
-function formatarData(data) {
+function formatarData(
+    data
+) {
 
     const [
         ano,
@@ -443,13 +588,13 @@ function formatarData(data) {
 }
 
 
-// ===============================
-// FORMATAR HORA
-// ===============================
+function formatarHora(
+    hora
+) {
 
-function formatarHora(hora) {
-
-    if (!hora) {
+    if (
+        !hora
+    ) {
 
         return "--:--";
 
@@ -463,10 +608,6 @@ function formatarHora(hora) {
 
 }
 
-
-// ===============================
-// DATA ATUAL
-// ===============================
 
 function definirDataAtual() {
 
@@ -506,363 +647,9 @@ function definirDataAtual() {
 }
 
 
-// ===============================
-// PREPARAR EDIÇÃO
-// ===============================
-
-function iniciarEdicao(atividade) {
-
-    atividadeEmEdicao =
-        atividade.id;
-
-
-    form.titulo.value =
-        atividade.titulo;
-
-
-    form.descricao.value =
-        atividade.descricao ?? "";
-
-
-    form.categoria.value =
-        atividade.categoria;
-
-
-    form.data.value =
-        atividade.data;
-
-
-    form.hora_inicio.value =
-        formatarHora(
-            atividade.hora_inicio
-        );
-
-
-    form.hora_fim.value =
-        atividade.hora_fim
-            ? formatarHora(
-                atividade.hora_fim
-            )
-            : "";
-
-
-    form.prioridade.value =
-        atividade.prioridade;
-
-
-    botaoSalvar.textContent =
-        "Salvar alterações";
-
-
-    botaoCancelarEdicao.hidden =
-        false;
-
-
-    mensagem.textContent =
-        `Editando atividade #${atividade.id}`;
-
-
-    form.titulo.focus();
-
-}
-
-
-// ===============================
-// CANCELAR EDIÇÃO
-// ===============================
-
-function cancelarEdicao() {
-
-    atividadeEmEdicao =
-        null;
-
-
-    form.reset();
-
-
-    definirDataAtual();
-
-
-    botaoSalvar.textContent =
-        "Adicionar atividade";
-
-
-    botaoCancelarEdicao.hidden =
-        true;
-
-
-    mensagem.textContent =
-        "";
-
-}
-
-
-botaoCancelarEdicao.addEventListener(
-    "click",
-    cancelarEdicao
-);
-
-
-// ===============================
-// POST / PATCH
-// ===============================
-
-form.addEventListener(
-    "submit",
-    async evento => {
-
-        evento.preventDefault();
-
-
-        const dadosAtividade = {
-
-            titulo:
-                form.titulo.value.trim(),
-
-            descricao:
-                form.descricao.value.trim()
-                || null,
-
-            categoria:
-                form.categoria.value,
-
-            data:
-                form.data.value,
-
-            hora_inicio:
-                form.hora_inicio.value,
-
-            hora_fim:
-                form.hora_fim.value
-                || null,
-
-            prioridade:
-                form.prioridade.value
-
-        };
-
-
-        const editando =
-            atividadeEmEdicao !== null;
-
-
-        const url =
-            editando
-                ? `/atividades/${atividadeEmEdicao}`
-                : "/atividades";
-
-
-        const metodo =
-            editando
-                ? "PATCH"
-                : "POST";
-
-
-        try {
-
-            const resposta =
-                await fetch(
-                    url,
-                    {
-
-                        method: metodo,
-
-                        headers: {
-
-                            "Content-Type":
-                                "application/json"
-
-                        },
-
-                        body:
-                            JSON.stringify(
-                                dadosAtividade
-                            )
-
-                    }
-                );
-
-
-            if (!resposta.ok) {
-
-                const erro =
-                    await resposta.json();
-
-
-                console.error(
-                    erro
-                );
-
-
-                mensagem.textContent =
-                    erro.detail
-                    ?? "Não foi possível salvar a atividade.";
-
-
-                return;
-
-            }
-
-
-            mensagem.textContent =
-                editando
-                    ? "Atividade atualizada com sucesso!"
-                    : "Atividade cadastrada com sucesso!";
-
-
-            atividadeEmEdicao =
-                null;
-
-
-            form.reset();
-
-
-            definirDataAtual();
-
-
-            botaoSalvar.textContent =
-                "Adicionar atividade";
-
-
-            botaoCancelarEdicao.hidden =
-                true;
-
-
-            await carregarAtividades();
-
-
-        } catch (erro) {
-
-            console.error(
-                erro
-            );
-
-
-            mensagem.textContent =
-                "Erro ao comunicar com a API.";
-
-        }
-
-    }
-);
-
-
-// ===============================
-// PATCH - CONCLUIR
-// ===============================
-
-async function concluirAtividade(id) {
-
-    try {
-
-        const resposta =
-            await fetch(
-                `/atividades/${id}/concluir`,
-                {
-                    method: "PATCH"
-                }
-            );
-
-
-        if (!resposta.ok) {
-
-            throw new Error(
-                "Não foi possível concluir a atividade."
-            );
-
-        }
-
-
-        mensagem.textContent =
-            "Atividade concluída!";
-
-
-        await carregarAtividades();
-
-
-    } catch (erro) {
-
-        console.error(
-            erro
-        );
-
-
-        mensagem.textContent =
-            "Erro ao concluir atividade.";
-
-    }
-
-}
-
-
-// ===============================
-// DELETE
-// ===============================
-
-async function excluirAtividade(id) {
-
-    const confirmar =
-        window.confirm(
-            "Deseja realmente excluir esta atividade?"
-        );
-
-
-    if (!confirmar) {
-
-        return;
-
-    }
-
-
-    try {
-
-        const resposta =
-            await fetch(
-                `/atividades/${id}`,
-                {
-                    method: "DELETE"
-                }
-            );
-
-
-        if (!resposta.ok) {
-
-            throw new Error(
-                "Não foi possível excluir a atividade."
-            );
-
-        }
-
-
-        if (atividadeEmEdicao === id) {
-
-            cancelarEdicao();
-
-        }
-
-
-        mensagem.textContent =
-            "Atividade excluída com sucesso!";
-
-
-        await carregarAtividades();
-
-
-    } catch (erro) {
-
-        console.error(
-            erro
-        );
-
-
-        mensagem.textContent =
-            "Erro ao excluir atividade.";
-
-    }
-
-}
-
-function obterInicioSemana(data) {
+function obterInicioSemana(
+    data
+) {
 
     const resultado =
         new Date(
@@ -892,6 +679,7 @@ function obterInicioSemana(data) {
 
 }
 
+
 function adicionarDias(
     data,
     quantidade
@@ -915,7 +703,10 @@ function adicionarDias(
 
 }
 
-function dataParaISO(data) {
+
+function dataParaISO(
+    data
+) {
 
     const ano =
         data.getFullYear();
@@ -942,6 +733,7 @@ function dataParaISO(data) {
     return `${ano}-${mes}-${dia}`;
 
 }
+
 
 function formatarPeriodoSemana(
     inicio
@@ -979,11 +771,418 @@ function formatarPeriodoSemana(
 
 }
 
+
+function horarioParaMinutos(
+    horario
+) {
+
+    if (
+        !horario
+        ||
+        typeof horario !== "string"
+    ) {
+
+        return null;
+
+    }
+
+
+    const partes =
+        horario.split(":");
+
+
+    if (
+        partes.length < 2
+    ) {
+
+        return null;
+
+    }
+
+
+    const hora =
+        Number(
+            partes[0]
+        );
+
+
+    const minuto =
+        Number(
+            partes[1]
+        );
+
+
+    if (
+        Number.isNaN(hora)
+        ||
+        Number.isNaN(minuto)
+    ) {
+
+        return null;
+
+    }
+
+
+    return (
+        hora * 60
+        + minuto
+    );
+
+}
+
+
+function obterIntervaloAtividade(
+    atividade
+) {
+
+    const inicio =
+        horarioParaMinutos(
+            atividade.hora_inicio
+        );
+
+
+    if (
+        inicio === null
+    ) {
+
+        return null;
+
+    }
+
+
+    const fimCalculado =
+        atividade.hora_fim
+            ? horarioParaMinutos(
+                atividade.hora_fim
+            )
+            : inicio + 60;
+
+
+    if (
+        fimCalculado === null
+    ) {
+
+        return null;
+
+    }
+
+
+    return {
+        inicio,
+        fim: fimCalculado
+    };
+
+}
+
+
+// =====================================================
+// CONFLITOS
+// =====================================================
+
+function horariosConflitam(
+    atividadeA,
+    atividadeB
+) {
+
+    if (
+        atividadeA.data
+        !== atividadeB.data
+    ) {
+
+        return false;
+
+    }
+
+
+    const intervaloA =
+        obterIntervaloAtividade(
+            atividadeA
+        );
+
+
+    const intervaloB =
+        obterIntervaloAtividade(
+            atividadeB
+        );
+
+
+    if (
+        intervaloA === null
+        ||
+        intervaloB === null
+    ) {
+
+        return false;
+
+    }
+
+
+    return (
+        intervaloA.inicio
+        < intervaloB.fim
+        &&
+        intervaloA.fim
+        > intervaloB.inicio
+    );
+
+}
+
+
+function atividadeTemConflito(
+    atividade
+) {
+
+    return atividadesCarregadas.some(
+        outraAtividade => {
+
+            if (
+                outraAtividade.id
+                === atividade.id
+            ) {
+
+                return false;
+
+            }
+
+
+            return horariosConflitam(
+                atividade,
+                outraAtividade
+            );
+
+        }
+    );
+
+}
+
+
+function organizarConflitos(
+    atividades
+) {
+
+    const eventos =
+        atividades
+            .map(
+                atividade => {
+
+                    const intervalo =
+                        obterIntervaloAtividade(
+                            atividade
+                        );
+
+
+                    if (
+                        intervalo === null
+                    ) {
+
+                        return null;
+
+                    }
+
+
+                    return {
+                        atividade,
+                        inicio:
+                            intervalo.inicio,
+                        fim:
+                            intervalo.fim
+                    };
+
+                }
+            )
+            .filter(
+                evento =>
+                    evento !== null
+            )
+            .sort(
+                (a, b) => {
+
+                    if (
+                        a.inicio
+                        !== b.inicio
+                    ) {
+
+                        return (
+                            a.inicio
+                            - b.inicio
+                        );
+
+                    }
+
+
+                    return (
+                        a.fim
+                        - b.fim
+                    );
+
+                }
+            );
+
+
+    const grupos = [];
+
+    let grupoAtual = [];
+
+    let fimGrupo =
+        -Infinity;
+
+
+    eventos.forEach(
+        evento => {
+
+            if (
+                grupoAtual.length === 0
+                ||
+                evento.inicio < fimGrupo
+            ) {
+
+                grupoAtual.push(
+                    evento
+                );
+
+
+                fimGrupo =
+                    Math.max(
+                        fimGrupo,
+                        evento.fim
+                    );
+
+            } else {
+
+                grupos.push(
+                    grupoAtual
+                );
+
+
+                grupoAtual = [
+                    evento
+                ];
+
+
+                fimGrupo =
+                    evento.fim;
+
+            }
+
+        }
+    );
+
+
+    if (
+        grupoAtual.length > 0
+    ) {
+
+        grupos.push(
+            grupoAtual
+        );
+
+    }
+
+
+    const resultado = [];
+
+
+    grupos.forEach(
+        grupo => {
+
+            const fimDasColunas = [];
+
+
+            grupo.forEach(
+                evento => {
+
+                    let coluna =
+                        fimDasColunas.findIndex(
+                            fim =>
+                                fim <= evento.inicio
+                        );
+
+
+                    if (
+                        coluna === -1
+                    ) {
+
+                        coluna =
+                            fimDasColunas.length;
+
+
+                        fimDasColunas.push(
+                            evento.fim
+                        );
+
+                    } else {
+
+                        fimDasColunas[
+                            coluna
+                        ] =
+                            evento.fim;
+
+                    }
+
+
+                    evento.coluna =
+                        coluna;
+
+                }
+            );
+
+
+            const totalColunas =
+                Math.max(
+                    fimDasColunas.length,
+                    1
+                );
+
+
+            grupo.forEach(
+                evento => {
+
+                    resultado.push(
+                        {
+                            atividade:
+                                evento.atividade,
+
+                            coluna:
+                                evento.coluna,
+
+                            totalColunas,
+
+                            conflito:
+                                totalColunas > 1
+                        }
+                    );
+
+                }
+            );
+
+        }
+    );
+
+
+    return resultado;
+
+}
+
+
+// =====================================================
+// AGENDA SEMANAL
+// =====================================================
+
 function renderizarAgendaSemanal(
     atividades
 ) {
 
-    agendaSemana.innerHTML = "";
+    if (
+        !agendaSemana
+    ) {
+
+        return;
+
+    }
+
+
+    agendaSemana.innerHTML =
+        "";
 
 
     periodoSemana.textContent =
@@ -1058,25 +1257,17 @@ function renderizarAgendaSemanal(
         );
 
 
-        const cabecalho =
+        grade.appendChild(
             criarCabecalhoDia(
                 data
-            );
-
-
-        grade.appendChild(
-            cabecalho
+            )
         );
 
     }
 
 
-    const colunaHoras =
-        criarColunaHoras();
-
-
     grade.appendChild(
-        colunaHoras
+        criarColunaHoras()
     );
 
 
@@ -1087,9 +1278,7 @@ function renderizarAgendaSemanal(
         data => {
 
             const coluna =
-                document.createElement(
-                    "div"
-                );
+                document.createElement("div");
 
 
             coluna.className =
@@ -1104,7 +1293,9 @@ function renderizarAgendaSemanal(
 
             if (
                 dataParaISO(data)
-                === dataParaISO(new Date())
+                === dataParaISO(
+                    new Date()
+                )
             ) {
 
                 coluna.classList.add(
@@ -1127,39 +1318,53 @@ function renderizarAgendaSemanal(
     );
 
 
-    atividades.forEach(
-        atividade => {
+    diasSemana.forEach(
+        (data, indiceDia) => {
 
-            const indiceDia =
-                diasSemana.findIndex(
-                    data =>
-                        dataParaISO(data)
-                        === atividade.data
+            const dataISO =
+                dataParaISO(
+                    data
                 );
 
 
-            if (indiceDia === -1) {
-
-                return;
-
-            }
-
-
-            const bloco =
-                criarBlocoAgenda(
-                    atividade
+            const atividadesDoDia =
+                atividades.filter(
+                    atividade =>
+                        atividade.data
+                        === dataISO
                 );
 
 
-            if (bloco !== null) {
-
-                colunasDias[
-                    indiceDia
-                ].appendChild(
-                    bloco
+            const atividadesOrganizadas =
+                organizarConflitos(
+                    atividadesDoDia
                 );
 
-            }
+
+            atividadesOrganizadas.forEach(
+                item => {
+
+                    const bloco =
+                        criarBlocoAgenda(
+                            item.atividade,
+                            item
+                        );
+
+
+                    if (
+                        bloco !== null
+                    ) {
+
+                        colunasDias[
+                            indiceDia
+                        ].appendChild(
+                            bloco
+                        );
+
+                    }
+
+                }
+            );
 
         }
     );
@@ -1171,7 +1376,10 @@ function renderizarAgendaSemanal(
 
 }
 
-function criarCabecalhoDia(data) {
+
+function criarCabecalhoDia(
+    data
+) {
 
     const cabecalho =
         document.createElement("div");
@@ -1183,7 +1391,9 @@ function criarCabecalhoDia(data) {
 
     if (
         dataParaISO(data)
-        === dataParaISO(new Date())
+        === dataParaISO(
+            new Date()
+        )
     ) {
 
         cabecalho.classList.add(
@@ -1202,15 +1412,17 @@ function criarCabecalhoDia(data) {
 
 
     nome.textContent =
-        data.toLocaleDateString(
-            "pt-BR",
-            {
-                weekday: "short"
-            }
-        ).replace(
-            ".",
-            ""
-        );
+        data
+            .toLocaleDateString(
+                "pt-BR",
+                {
+                    weekday: "short"
+                }
+            )
+            .replace(
+                ".",
+                ""
+            );
 
 
     const numero =
@@ -1244,6 +1456,7 @@ function criarCabecalhoDia(data) {
     return cabecalho;
 
 }
+
 
 function criarColunaHoras() {
 
@@ -1296,51 +1509,33 @@ function criarColunaHoras() {
 
 }
 
-function horarioParaMinutos(
-    horario
-) {
-
-    const [
-        hora,
-        minuto
-    ] = horario
-        .split(":")
-        .map(Number);
-
-
-    return (
-        hora * 60
-        + minuto
-    );
-
-}
 
 function criarBlocoAgenda(
-    atividade
+    atividade,
+    layout
 ) {
 
-    const inicio =
-        horarioParaMinutos(
-            atividade.hora_inicio
+    const intervalo =
+        obterIntervaloAtividade(
+            atividade
         );
 
 
-    let fim;
+    if (
+        intervalo === null
+    ) {
 
-
-    if (atividade.hora_fim) {
-
-        fim =
-            horarioParaMinutos(
-                atividade.hora_fim
-            );
-
-    } else {
-
-        fim =
-            inicio + 60;
+        return null;
 
     }
+
+
+    const inicio =
+        intervalo.inicio;
+
+
+    const fim =
+        intervalo.fim;
 
 
     const limiteInicial =
@@ -1369,6 +1564,8 @@ function criarBlocoAgenda(
         fimVisivel <= limiteInicial
         ||
         inicioVisivel >= limiteFinal
+        ||
+        fimVisivel <= inicioVisivel
     ) {
 
         return null;
@@ -1401,15 +1598,12 @@ function criarBlocoAgenda(
                 / 60
             )
             * ALTURA_HORA,
-
             32
         );
 
 
     const bloco =
-        document.createElement(
-            "button"
-        );
+        document.createElement("button");
 
 
     bloco.type =
@@ -1420,10 +1614,23 @@ function criarBlocoAgenda(
         "agenda-evento";
 
 
-    if (atividade.concluida) {
+    if (
+        atividade.concluida
+    ) {
 
         bloco.classList.add(
             "concluida"
+        );
+
+    }
+
+
+    if (
+        layout.conflito
+    ) {
+
+        bloco.classList.add(
+            "conflito"
         );
 
     }
@@ -1437,10 +1644,26 @@ function criarBlocoAgenda(
         `${altura}px`;
 
 
+    const largura =
+        100
+        / layout.totalColunas;
+
+
+    const esquerda =
+        largura
+        * layout.coluna;
+
+
+    bloco.style.left =
+        `calc(${esquerda}% + 3px)`;
+
+
+    bloco.style.width =
+        `calc(${largura}% - 6px)`;
+
+
     const titulo =
-        document.createElement(
-            "strong"
-        );
+        document.createElement("strong");
 
 
     titulo.textContent =
@@ -1448,9 +1671,7 @@ function criarBlocoAgenda(
 
 
     const horario =
-        document.createElement(
-            "span"
-        );
+        document.createElement("span");
 
 
     horario.textContent =
@@ -1458,14 +1679,11 @@ function criarBlocoAgenda(
             atividade.hora_inicio
         )} - ${formatarHora(
             atividade.hora_fim
-        )
-        }`;
+        )}`;
 
 
     const categoria =
-        document.createElement(
-            "span"
-        );
+        document.createElement("span");
 
 
     categoria.textContent =
@@ -1487,16 +1705,38 @@ function criarBlocoAgenda(
     );
 
 
+    if (
+        layout.conflito
+    ) {
+
+        const aviso =
+            document.createElement("span");
+
+
+        aviso.className =
+            "indicador-conflito";
+
+
+        aviso.textContent =
+            "Conflito";
+
+
+        bloco.appendChild(
+            aviso
+        );
+
+    }
+
+
     bloco.title =
         `${atividade.titulo} — clique para editar`;
 
 
     bloco.addEventListener(
         "click",
-        () =>
-            iniciarEdicao(
-                atividade
-            )
+        () => iniciarEdicao(
+            atividade
+        )
     );
 
 
@@ -1504,76 +1744,412 @@ function criarBlocoAgenda(
 
 }
 
-botaoSemanaAnterior.addEventListener(
-    "click",
-    () => {
 
-        inicioSemanaExibida =
-            adicionarDias(
-                inicioSemanaExibida,
-                -7
+// =====================================================
+// EDIÇÃO
+// =====================================================
+
+function iniciarEdicao(
+    atividade
+) {
+
+    atividadeEmEdicao =
+        atividade.id;
+
+
+    form.titulo.value =
+        atividade.titulo;
+
+
+    form.descricao.value =
+        atividade.descricao
+        ?? "";
+
+
+    form.categoria.value =
+        atividade.categoria;
+
+
+    form.data.value =
+        atividade.data;
+
+
+    form.hora_inicio.value =
+        formatarHora(
+            atividade.hora_inicio
+        );
+
+
+    form.hora_fim.value =
+        atividade.hora_fim
+            ? formatarHora(
+                atividade.hora_fim
+            )
+            : "";
+
+
+    form.prioridade.value =
+        atividade.prioridade;
+
+
+    botaoSalvar.textContent =
+        "Salvar alterações";
+
+
+    botaoCancelarEdicao.hidden =
+        false;
+
+
+    mensagem.textContent =
+        `Editando atividade #${atividade.id}`;
+
+
+    form.titulo.focus();
+
+}
+
+
+function cancelarEdicao() {
+
+    atividadeEmEdicao =
+        null;
+
+
+    form.reset();
+
+
+    definirDataAtual();
+
+
+    botaoSalvar.textContent =
+        "Adicionar atividade";
+
+
+    botaoCancelarEdicao.hidden =
+        true;
+
+
+    mensagem.textContent =
+        "";
+
+}
+
+
+// =====================================================
+// POST / PATCH
+// =====================================================
+
+form.addEventListener(
+    "submit",
+    async evento => {
+
+        evento.preventDefault();
+
+
+        mensagem.textContent =
+            "";
+
+
+        const dadosAtividade = {
+
+            titulo:
+                form.titulo.value.trim(),
+
+            descricao:
+                form.descricao.value.trim()
+                || null,
+
+            categoria:
+                form.categoria.value,
+
+            data:
+                form.data.value,
+
+            hora_inicio:
+                form.hora_inicio.value,
+
+            hora_fim:
+                form.hora_fim.value
+                || null,
+
+            prioridade:
+                form.prioridade.value
+
+        };
+
+
+        const editando =
+            atividadeEmEdicao
+            !== null;
+
+
+        const url =
+            editando
+                ? `/atividades/${atividadeEmEdicao}`
+                : "/atividades";
+
+
+        const metodo =
+            editando
+                ? "PATCH"
+                : "POST";
+
+
+        try {
+
+            const resposta =
+                await fetch(
+                    url,
+                    {
+                        method:
+                            metodo,
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body:
+                            JSON.stringify(
+                                dadosAtividade
+                            )
+                    }
+                );
+
+
+            if (
+                !resposta.ok
+            ) {
+
+                const erro =
+                    await resposta.json();
+
+
+                console.error(
+                    "Erro ao salvar:",
+                    erro
+                );
+
+
+                if (
+                    typeof erro.detail
+                    === "string"
+                ) {
+
+                    mensagem.textContent =
+                        erro.detail;
+
+                } else {
+
+                    mensagem.textContent =
+                        "Não foi possível salvar a atividade.";
+
+                }
+
+
+                return;
+
+            }
+
+
+            mensagem.textContent =
+                editando
+                    ? "Atividade atualizada com sucesso!"
+                    : "Atividade cadastrada com sucesso!";
+
+
+            atividadeEmEdicao =
+                null;
+
+
+            form.reset();
+
+
+            definirDataAtual();
+
+
+            botaoSalvar.textContent =
+                "Adicionar atividade";
+
+
+            botaoCancelarEdicao.hidden =
+                true;
+
+
+            await carregarAtividades();
+
+
+        } catch (erro) {
+
+            console.error(
+                "Erro ao comunicar com a API:",
+                erro
             );
 
 
-        renderizarAgendaSemanal(
-            obterAtividadesFiltradas()
+            mensagem.textContent =
+                "Erro ao comunicar com a API.";
 
-        );
+        }
 
     }
 );
 
-botaoSemanaProxima.addEventListener(
-    "click",
-    () => {
 
-        inicioSemanaExibida =
-            adicionarDias(
-                inicioSemanaExibida,
-                7
+// =====================================================
+// PATCH - CONCLUIR
+// =====================================================
+
+async function concluirAtividade(
+    id
+) {
+
+    try {
+
+        const resposta =
+            await fetch(
+                `/atividades/${id}/concluir`,
+                {
+                    method:
+                        "PATCH"
+                }
             );
 
 
-        renderizarAgendaSemanal(
-            obterAtividadesFiltradas()
+        if (
+            !resposta.ok
+        ) {
 
+            throw new Error(
+                `Erro ${resposta.status} ao concluir atividade.`
+            );
+
+        }
+
+
+        mensagem.textContent =
+            "Atividade concluída!";
+
+
+        await carregarAtividades();
+
+
+    } catch (erro) {
+
+        console.error(
+            "Erro ao concluir:",
+            erro
         );
 
+
+        mensagem.textContent =
+            "Erro ao concluir atividade.";
+
     }
-);
 
-botaoSemanaAtual.addEventListener(
-    "click",
-    () => {
+}
 
-        inicioSemanaExibida =
-            obterInicioSemana(
-                new Date()
+
+// =====================================================
+// DELETE
+// =====================================================
+
+async function excluirAtividade(
+    id
+) {
+
+    const confirmar =
+        window.confirm(
+            "Deseja realmente excluir esta atividade?"
+        );
+
+
+    if (
+        !confirmar
+    ) {
+
+        return;
+
+    }
+
+
+    try {
+
+        const resposta =
+            await fetch(
+                `/atividades/${id}`,
+                {
+                    method:
+                        "DELETE"
+                }
             );
 
 
-        renderizarAgendaSemanal(
-            obterAtividadesFiltradas()
+        if (
+            !resposta.ok
+        ) {
 
+            throw new Error(
+                `Erro ${resposta.status} ao excluir atividade.`
+            );
+
+        }
+
+
+        if (
+            atividadeEmEdicao
+            === id
+        ) {
+
+            cancelarEdicao();
+
+        }
+
+
+        mensagem.textContent =
+            "Atividade excluída com sucesso!";
+
+
+        await carregarAtividades();
+
+
+    } catch (erro) {
+
+        console.error(
+            "Erro ao excluir:",
+            erro
         );
 
+
+        mensagem.textContent =
+            "Erro ao excluir atividade.";
+
     }
-);
+
+}
+
+
+// =====================================================
+// EVENTOS DOS FILTROS
+// =====================================================
 
 filtroCategoria.addEventListener(
     "change",
     aplicarFiltros
 );
 
+
 filtroPrioridade.addEventListener(
     "change",
     aplicarFiltros
 );
 
+
 filtroStatus.addEventListener(
     "change",
     aplicarFiltros
 );
+
 
 botaoLimparFiltros.addEventListener(
     "click",
@@ -1596,103 +2172,80 @@ botaoLimparFiltros.addEventListener(
     }
 );
 
-function obterAtividadesFiltradas() {
 
-    const categoriaSelecionada =
-        filtroCategoria.value;
+// =====================================================
+// NAVEGAÇÃO DA SEMANA
+// =====================================================
 
+botaoSemanaAnterior.addEventListener(
+    "click",
+    () => {
 
-    const prioridadeSelecionada =
-        filtroPrioridade.value;
-
-
-    const statusSelecionado =
-        filtroStatus.value;
-
-
-    return atividadesCarregadas.filter(
-        atividade => {
-
-            if (
-                categoriaSelecionada
-                &&
-                atividade.categoria
-                !== categoriaSelecionada
-            ) {
-
-                return false;
-
-            }
+        inicioSemanaExibida =
+            adicionarDias(
+                inicioSemanaExibida,
+                -7
+            );
 
 
-            if (
-                prioridadeSelecionada
-                &&
-                atividade.prioridade
-                !== prioridadeSelecionada
-            ) {
+        renderizarAgendaSemanal(
+            obterAtividadesFiltradas()
+        );
 
-                return false;
-
-            }
+    }
+);
 
 
-            if (
-                statusSelecionado
-                === "pendentes"
-                &&
-                atividade.concluida
-            ) {
+botaoSemanaAtual.addEventListener(
+    "click",
+    () => {
 
-                return false;
-
-            }
+        inicioSemanaExibida =
+            obterInicioSemana(
+                new Date()
+            );
 
 
-            if (
-                statusSelecionado
-                === "concluidas"
-                &&
-                !atividade.concluida
-            ) {
+        renderizarAgendaSemanal(
+            obterAtividadesFiltradas()
+        );
 
-                return false;
-
-            }
+    }
+);
 
 
-            return true;
+botaoSemanaProxima.addEventListener(
+    "click",
+    () => {
 
-        }
-    );
-
-}
-
-function aplicarFiltros() {
-
-    const atividadesFiltradas =
-        obterAtividadesFiltradas();
+        inicioSemanaExibida =
+            adicionarDias(
+                inicioSemanaExibida,
+                7
+            );
 
 
-    exibirAtividades(
-        atividadesFiltradas
-    );
+        renderizarAgendaSemanal(
+            obterAtividadesFiltradas()
+        );
+
+    }
+);
 
 
-    renderizarAgendaSemanal(
-        atividadesFiltradas
-    );
+// =====================================================
+// BOTÃO CANCELAR EDIÇÃO
+// =====================================================
+
+botaoCancelarEdicao.addEventListener(
+    "click",
+    cancelarEdicao
+);
 
 
-    atualizarContador(
-        atividadesFiltradas.length,
-        atividadesCarregadas.length
-    );
-
-}
-// ===============================
+// =====================================================
 // INICIALIZAÇÃO
-// ===============================
+// =====================================================
 
 definirDataAtual();
 

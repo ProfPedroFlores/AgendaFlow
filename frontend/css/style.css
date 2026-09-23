@@ -537,7 +537,7 @@ h2 {
     position: absolute;
 
     left: 4px;
-    right: 4px;
+    width: calc(100% - 8px);
 
     overflow: hidden;
 
@@ -560,6 +560,30 @@ h2 {
     font-size: 11px;
 
     line-height: 1.25;
+}
+
+.agenda-evento.conflito {
+    border-color: #c47a16;
+}
+
+
+.indicador-conflito {
+    margin-top: 3px;
+
+    font-size: 10px;
+
+    font-weight: bold;
+
+    text-transform: uppercase;
+}
+
+
+.aviso-conflito {
+    margin: 8px 0 0;
+
+    font-size: 12px;
+
+    font-weight: bold;
 }
 
 
