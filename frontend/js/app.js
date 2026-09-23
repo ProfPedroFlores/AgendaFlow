@@ -31,6 +31,28 @@ const botaoSemanaAtual =
 const botaoSemanaProxima =
     document.querySelector("#semana-proxima");
 
+const filtroCategoria =
+    document.querySelector(
+        "#filtro-categoria"
+    );
+
+
+const filtroPrioridade =
+    document.querySelector(
+        "#filtro-prioridade"
+    );
+
+
+const filtroStatus =
+    document.querySelector(
+        "#filtro-status"
+    );
+
+
+const botaoLimparFiltros =
+    document.querySelector(
+        "#limpar-filtros"
+    );
 
 const HORA_INICIAL = 6;
 
@@ -77,15 +99,7 @@ async function carregarAtividades() {
         atividadesCarregadas =
             atividades;
 
-
-        exibirAtividades(
-            atividades
-        );
-
-
-        renderizarAgendaSemanal(
-            atividades
-        );
+        aplicarFiltros();
 
 
     } catch (erro) {
@@ -110,14 +124,6 @@ async function carregarAtividades() {
 function exibirAtividades(atividades) {
 
     listaAtividades.innerHTML = "";
-
-
-    contadorAtividades.textContent =
-        `${atividades.length} atividade${atividades.length === 1
-            ? ""
-            : "s"
-        }`;
-
 
     if (atividades.length === 0) {
 
@@ -161,6 +167,32 @@ function exibirAtividades(atividades) {
 
 }
 
+function atualizarContador(
+    quantidadeFiltrada,
+    quantidadeTotal
+) {
+
+    if (
+        quantidadeFiltrada
+        === quantidadeTotal
+    ) {
+
+        contadorAtividades.textContent =
+            `${quantidadeTotal} atividade${quantidadeTotal === 1
+                ? ""
+                : "s"
+            }`;
+
+
+        return;
+
+    }
+
+
+    contadorAtividades.textContent =
+        `${quantidadeFiltrada} de ${quantidadeTotal} atividades`;
+
+}
 
 // ===============================
 // CRIAR CARD
@@ -1245,12 +1277,11 @@ function criarColunaHoras() {
 
 
         marcador.style.top =
-            `${
-                (
-                    hora
-                    - HORA_INICIAL
-                )
-                * ALTURA_HORA
+            `${(
+                hora
+                - HORA_INICIAL
+            )
+            * ALTURA_HORA
             }px`;
 
 
@@ -1425,10 +1456,9 @@ function criarBlocoAgenda(
     horario.textContent =
         `${formatarHora(
             atividade.hora_inicio
-        )} - ${
-            formatarHora(
-                atividade.hora_fim
-            )
+        )} - ${formatarHora(
+            atividade.hora_fim
+        )
         }`;
 
 
@@ -1486,7 +1516,8 @@ botaoSemanaAnterior.addEventListener(
 
 
         renderizarAgendaSemanal(
-            atividadesCarregadas
+            obterAtividadesFiltradas()
+
         );
 
     }
@@ -1504,7 +1535,8 @@ botaoSemanaProxima.addEventListener(
 
 
         renderizarAgendaSemanal(
-            atividadesCarregadas
+            obterAtividadesFiltradas()
+
         );
 
     }
@@ -1521,11 +1553,143 @@ botaoSemanaAtual.addEventListener(
 
 
         renderizarAgendaSemanal(
-            atividadesCarregadas
+            obterAtividadesFiltradas()
+
         );
 
     }
 );
+
+filtroCategoria.addEventListener(
+    "change",
+    aplicarFiltros
+);
+
+filtroPrioridade.addEventListener(
+    "change",
+    aplicarFiltros
+);
+
+filtroStatus.addEventListener(
+    "change",
+    aplicarFiltros
+);
+
+botaoLimparFiltros.addEventListener(
+    "click",
+    () => {
+
+        filtroCategoria.value =
+            "";
+
+
+        filtroPrioridade.value =
+            "";
+
+
+        filtroStatus.value =
+            "todas";
+
+
+        aplicarFiltros();
+
+    }
+);
+
+function obterAtividadesFiltradas() {
+
+    const categoriaSelecionada =
+        filtroCategoria.value;
+
+
+    const prioridadeSelecionada =
+        filtroPrioridade.value;
+
+
+    const statusSelecionado =
+        filtroStatus.value;
+
+
+    return atividadesCarregadas.filter(
+        atividade => {
+
+            if (
+                categoriaSelecionada
+                &&
+                atividade.categoria
+                !== categoriaSelecionada
+            ) {
+
+                return false;
+
+            }
+
+
+            if (
+                prioridadeSelecionada
+                &&
+                atividade.prioridade
+                !== prioridadeSelecionada
+            ) {
+
+                return false;
+
+            }
+
+
+            if (
+                statusSelecionado
+                === "pendentes"
+                &&
+                atividade.concluida
+            ) {
+
+                return false;
+
+            }
+
+
+            if (
+                statusSelecionado
+                === "concluidas"
+                &&
+                !atividade.concluida
+            ) {
+
+                return false;
+
+            }
+
+
+            return true;
+
+        }
+    );
+
+}
+
+function aplicarFiltros() {
+
+    const atividadesFiltradas =
+        obterAtividadesFiltradas();
+
+
+    exibirAtividades(
+        atividadesFiltradas
+    );
+
+
+    renderizarAgendaSemanal(
+        atividadesFiltradas
+    );
+
+
+    atualizarContador(
+        atividadesFiltradas.length,
+        atividadesCarregadas.length
+    );
+
+}
 // ===============================
 // INICIALIZAÇÃO
 // ===============================
