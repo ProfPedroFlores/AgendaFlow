@@ -349,6 +349,8 @@ function criarCardAtividade(
 
     if (
         atividade.concluida
+        &&
+        !atividade.recorrente
     ) {
         card.classList.add(
             "atividade-concluida"
@@ -438,6 +440,23 @@ function criarCardAtividade(
     );
 
     if (
+        atividade.recorrente
+    ) {
+        const orientacao =
+            document.createElement("p");
+
+        orientacao.className =
+            "orientacao-recorrencia";
+
+        orientacao.textContent =
+            "Conclua cada ocorrência diretamente na agenda semanal.";
+
+        card.appendChild(
+            orientacao
+        );
+    }
+
+    if (
         atividadeTemConflitoNaSemana(
             atividade
         )
@@ -462,37 +481,37 @@ function criarCardAtividade(
     acoes.className =
         "acoes-atividade";
 
-    const botaoConcluir =
-        document.createElement("button");
-
-    botaoConcluir.type =
-        "button";
-
-    botaoConcluir.className =
-        "botao-acao";
-
-    botaoConcluir.textContent =
-        atividade.concluida
-            ? "Concluída"
-            : "Concluir";
-
-    botaoConcluir.disabled =
-        atividade.concluida;
-
     if (
-        atividade.recorrente
+        !atividade.recorrente
     ) {
-        botaoConcluir.title =
-            "Na versão atual, concluir uma atividade recorrente conclui toda a série.";
-    }
+        const botaoConcluir =
+            document.createElement("button");
 
-    botaoConcluir.addEventListener(
-        "click",
-        () => concluirAtividade(
-            atividade.id,
-            atividade.recorrente
-        )
-    );
+        botaoConcluir.type =
+            "button";
+
+        botaoConcluir.className =
+            "botao-acao";
+
+        botaoConcluir.textContent =
+            atividade.concluida
+                ? "Concluída"
+                : "Concluir";
+
+        botaoConcluir.disabled =
+            atividade.concluida;
+
+        botaoConcluir.addEventListener(
+            "click",
+            () => concluirAtividade(
+                atividade.id
+            )
+        );
+
+        acoes.appendChild(
+            botaoConcluir
+        );
+    }
 
     const botaoEditar =
         document.createElement("button");
@@ -531,10 +550,6 @@ function criarCardAtividade(
             atividade.id,
             atividade.recorrente
         )
-    );
-
-    acoes.appendChild(
-        botaoConcluir
     );
 
     acoes.appendChild(
@@ -1523,6 +1538,23 @@ function criarBlocoAgenda(
         bloco.appendChild(
             indicadorRecorrencia
         );
+
+        if (
+            ocorrencia.concluida
+        ) {
+            const indicadorConclusao =
+                document.createElement("span");
+
+            indicadorConclusao.className =
+                "indicador-conclusao";
+
+            indicadorConclusao.textContent =
+                "✓ Concluída";
+
+            bloco.appendChild(
+                indicadorConclusao
+            );
+        }
     }
 
     if (
@@ -1542,28 +1574,44 @@ function criarBlocoAgenda(
         );
     }
 
-    bloco.title =
-        `${ocorrencia.titulo} — clique para editar a atividade-base`;
+    if (
+        ocorrencia.recorrente
+    ) {
+        bloco.title =
+            ocorrencia.concluida
+                ? `${ocorrencia.titulo} — clique para reabrir esta ocorrência`
+                : `${ocorrencia.titulo} — clique para concluir esta ocorrência`;
 
-    bloco.addEventListener(
-        "click",
-        () => {
-            const atividadeBase =
-                atividadesCarregadas.find(
-                    atividade =>
-                        atividade.id
-                        === ocorrencia.id
-                );
+        bloco.addEventListener(
+            "click",
+            () => alternarConclusaoOcorrencia(
+                ocorrencia
+            )
+        );
+    } else {
+        bloco.title =
+            `${ocorrencia.titulo} — clique para editar`;
 
-            if (
-                atividadeBase
-            ) {
-                iniciarEdicao(
+        bloco.addEventListener(
+            "click",
+            () => {
+                const atividadeBase =
+                    atividadesCarregadas.find(
+                        atividade =>
+                            atividade.id
+                            === ocorrencia.id
+                    );
+
+                if (
                     atividadeBase
-                );
+                ) {
+                    iniciarEdicao(
+                        atividadeBase
+                    );
+                }
             }
-        }
-    );
+        );
+    }
 
     return bloco;
 }
@@ -1890,25 +1938,77 @@ function extrairMensagemErro(
     );
 }
 
-async function concluirAtividade(
-    id,
-    recorrente = false
+async function alternarConclusaoOcorrencia(
+    ocorrencia
 ) {
-    if (
-        recorrente
-    ) {
-        const confirmarSerie =
-            window.confirm(
-                "Esta atividade é recorrente. Na versão atual, concluir marcará toda a série como concluída. Deseja continuar?"
+    const metodo =
+        ocorrencia.concluida
+            ? "DELETE"
+            : "PATCH";
+
+    const url =
+        `/ocorrencias/${ocorrencia.id}/${ocorrencia.data}/concluir`;
+
+    try {
+        const resposta =
+            await fetch(
+                url,
+                {
+                    method:
+                        metodo
+                }
             );
 
         if (
-            !confirmarSerie
+            !resposta.ok
         ) {
-            return;
-        }
-    }
+            let detalhe =
+                "Não foi possível atualizar esta ocorrência.";
 
+            try {
+                const erro =
+                    await resposta.json();
+
+                if (
+                    typeof erro.detail
+                    === "string"
+                ) {
+                    detalhe =
+                        erro.detail;
+                }
+            } catch {
+                // Mantém a mensagem padrão.
+            }
+
+            throw new Error(
+                detalhe
+            );
+        }
+
+        mensagem.textContent =
+            ocorrencia.concluida
+                ? "Ocorrência reaberta."
+                : "Ocorrência concluída!";
+
+        await carregarOcorrenciasSemana();
+
+        exibirAtividadesFiltradas();
+
+    } catch (erro) {
+        console.error(
+            "Erro ao atualizar ocorrência:",
+            erro
+        );
+
+        mensagem.textContent =
+            erro.message
+            || "Erro ao atualizar ocorrência.";
+    }
+}
+
+async function concluirAtividade(
+    id
+) {
     try {
         const resposta =
             await fetch(
@@ -1931,6 +2031,7 @@ async function concluirAtividade(
             "Atividade concluída!";
 
         await carregarTudo();
+
     } catch (erro) {
         console.error(
             "Erro ao concluir:",

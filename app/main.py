@@ -11,12 +11,13 @@ from sqlalchemy.orm import Session
 from datetime import date, timedelta
 
 from app.database import Base, engine, get_db
-from app.models import Atividade
+from app.models import Atividade, OcorrenciaConcluida
 from app.schemas import (
     AtividadeCreate,
     AtividadeResponse,
     AtividadeUpdate,
-    OcorrenciaResponse
+    OcorrenciaResponse,
+    OcorrenciaConclusaoResponse
 )
 
 
@@ -57,7 +58,6 @@ def pagina_inicial():
         FRONTEND_DIR / "index.html"
     )
 
-
 def buscar_atividade_por_id(
     atividade_id: int,
     db: Session
@@ -75,7 +75,6 @@ def buscar_atividade_por_id(
         )
 
     return atividade
-
 
 @app.get("/status")
 def status_api():
@@ -104,7 +103,6 @@ def criar_atividade(
     db.refresh(nova_atividade)
 
     return nova_atividade
-
 
 @app.get(
     "/atividades",
@@ -139,7 +137,6 @@ def listar_atividades(
 
     return atividades
 
-
 @app.get(
     "/atividades/{atividade_id}",
     response_model=AtividadeResponse
@@ -153,7 +150,6 @@ def buscar_atividade(
         atividade_id,
         db
     )
-
 
 @app.patch(
     "/atividades/{atividade_id}",
@@ -286,7 +282,6 @@ def atualizar_atividade(
 
     return atividade
 
-
 @app.patch(
     "/atividades/{atividade_id}/concluir",
     response_model=AtividadeResponse
@@ -301,14 +296,31 @@ def concluir_atividade(
         db
     )
 
+    if atividade.recorrente:
+
+        raise HTTPException(
+            status_code=
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+
+            detail=(
+                "Atividades recorrentes devem ser "
+                "concluídas por ocorrência."
+            )
+        )
+
+
     atividade.concluida = True
+
 
     db.commit()
 
-    db.refresh(atividade)
+
+    db.refresh(
+        atividade
+    )
+
 
     return atividade
-
 
 @app.delete(
     "/atividades/{atividade_id}",
@@ -332,7 +344,9 @@ def excluir_atividade(
         status_code=status.HTTP_204_NO_CONTENT
     )
 
-@app.get("/ocorrencias",response_model=list[OcorrenciaResponse]
+@app.get(
+    "/ocorrencias",
+    response_model=list[OcorrenciaResponse]
 )
 def listar_ocorrencias(
     data_inicio: date,
@@ -378,6 +392,29 @@ def listar_ocorrencias(
     )
 
 
+    registros_concluidos = (
+        db.query(OcorrenciaConcluida)
+        .filter(
+            OcorrenciaConcluida.data_ocorrencia
+            >= data_inicio,
+
+            OcorrenciaConcluida.data_ocorrencia
+            <= data_fim
+        )
+        .all()
+    )
+
+
+    ocorrencias_concluidas = {
+        (
+            registro.atividade_id,
+            registro.data_ocorrencia
+        )
+        for registro
+        in registros_concluidos
+    }
+
+
     ocorrencias = []
 
 
@@ -385,8 +422,7 @@ def listar_ocorrencias(
 
 
     while (
-        data_atual
-        <= data_fim
+        data_atual <= data_fim
     ):
 
         for atividade in atividades:
@@ -396,6 +432,20 @@ def listar_ocorrencias(
                 data_atual
             ):
                 continue
+
+
+            if atividade.recorrente:
+
+                concluida = (
+                    atividade.id,
+                    data_atual
+                ) in ocorrencias_concluidas
+
+            else:
+
+                concluida = (
+                    atividade.concluida
+                )
 
 
             ocorrencias.append(
@@ -425,7 +475,7 @@ def listar_ocorrencias(
                         atividade.prioridade,
 
                     "concluida":
-                        atividade.concluida,
+                        concluida,
 
                     "recorrente":
                         atividade.recorrente,
@@ -450,6 +500,122 @@ def listar_ocorrencias(
 
 
     return ocorrencias
+
+@app.patch(
+    "/ocorrencias/{atividade_id}/{data_ocorrencia}/concluir",
+    response_model=OcorrenciaConclusaoResponse
+)
+def concluir_ocorrencia(
+    atividade_id: int,
+    data_ocorrencia: date,
+    db: Session = Depends(get_db)
+):
+
+    atividade = buscar_atividade_por_id(
+        atividade_id,
+        db
+    )
+
+
+    validar_ocorrencia_recorrente(
+        atividade,
+        data_ocorrencia
+    )
+
+
+    ocorrencia = (
+        db.query(OcorrenciaConcluida)
+        .filter(
+            OcorrenciaConcluida.atividade_id
+            == atividade_id,
+
+            OcorrenciaConcluida.data_ocorrencia
+            == data_ocorrencia
+        )
+        .first()
+    )
+
+
+    if ocorrencia is None:
+
+        ocorrencia = OcorrenciaConcluida(
+            atividade_id=atividade_id,
+            data_ocorrencia=data_ocorrencia
+        )
+
+        db.add(
+            ocorrencia
+        )
+
+        db.commit()
+
+        db.refresh(
+            ocorrencia
+        )
+
+
+    return {
+        "atividade_id":
+            ocorrencia.atividade_id,
+
+        "data_ocorrencia":
+            ocorrencia.data_ocorrencia,
+
+        "concluida":
+            True,
+
+        "concluida_em":
+            ocorrencia.concluida_em
+    }
+
+@app.delete(
+    "/ocorrencias/{atividade_id}/{data_ocorrencia}/concluir",
+    status_code=status.HTTP_204_NO_CONTENT
+)
+def reabrir_ocorrencia(
+    atividade_id: int,
+    data_ocorrencia: date,
+    db: Session = Depends(get_db)
+):
+
+    atividade = buscar_atividade_por_id(
+        atividade_id,
+        db
+    )
+
+
+    validar_ocorrencia_recorrente(
+        atividade,
+        data_ocorrencia
+    )
+
+
+    ocorrencia = (
+        db.query(OcorrenciaConcluida)
+        .filter(
+            OcorrenciaConcluida.atividade_id
+            == atividade_id,
+
+            OcorrenciaConcluida.data_ocorrencia
+            == data_ocorrencia
+        )
+        .first()
+    )
+
+
+    if ocorrencia is not None:
+
+        db.delete(
+            ocorrencia
+        )
+
+        db.commit()
+
+
+    return Response(
+        status_code=
+            status.HTTP_204_NO_CONTENT
+    )
 
 def atividade_ocorre_na_data(
     atividade: Atividade,
@@ -511,3 +677,26 @@ def atividade_ocorre_na_data(
 
 
     return False
+
+def validar_ocorrencia_recorrente(
+    atividade: Atividade,
+    data_ocorrencia: date
+):
+
+    if not atividade.recorrente:
+
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Esta atividade não é recorrente."
+        )
+
+
+    if not atividade_ocorre_na_data(
+        atividade,
+        data_ocorrencia
+    ):
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Não existe ocorrência desta atividade nesta data."
+        )

@@ -233,3 +233,13 @@ class OcorrenciaResponse(BaseModel):
     recorrente: bool
 
     tipo_recorrencia: TipoRecorrencia | None
+
+class OcorrenciaConclusaoResponse(BaseModel):
+
+    atividade_id: int
+
+    data_ocorrencia: date
+
+    concluida: bool
+
+    concluida_em: datetime | None = None

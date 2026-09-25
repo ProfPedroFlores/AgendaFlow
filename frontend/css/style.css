@@ -837,3 +837,27 @@ h2 {
 
     font-weight: bold;
 }
+
+.orientacao-recorrencia {
+    font-size: 12px;
+
+    color: #666666;
+
+    font-style: italic;
+}
+
+
+.indicador-conclusao {
+    margin-top: 3px;
+
+    font-size: 10px;
+
+    font-weight: bold;
+}
+
+
+.agenda-evento.concluida {
+    opacity: 0.6;
+
+    text-decoration: line-through;
+}
