@@ -1,22 +1,36 @@
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from fastapi import Depends, FastAPI, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
+from datetime import date, timedelta
+
 from app.database import Base, engine, get_db
 from app.models import Atividade
 from app.schemas import (
     AtividadeCreate,
     AtividadeResponse,
-    AtividadeUpdate
+    AtividadeUpdate,
+    OcorrenciaResponse
 )
 
 
 Base.metadata.create_all(bind=engine)
 
+DIAS_SEMANA = {
+    0: "segunda",
+    1: "terca",
+    2: "quarta",
+    3: "quinta",
+    4: "sexta",
+    5: "sabado",
+    6: "domingo"
+}
 
 app = FastAPI(
     title="AgendaFlow API",
@@ -156,39 +170,119 @@ def atualizar_atividade(
         db
     )
 
-    dados_atualizacao = dados.model_dump(
-        exclude_unset=True
+
+    dados_atualizacao = (
+        dados.model_dump(
+            exclude_unset=True
+        )
     )
 
-    nova_hora_inicio = dados_atualizacao.get(
-        "hora_inicio",
-        atividade.hora_inicio
+
+    dados_completos = {
+
+        "titulo":
+            atividade.titulo,
+
+        "descricao":
+            atividade.descricao,
+
+        "categoria":
+            atividade.categoria,
+
+        "data":
+            atividade.data,
+
+        "hora_inicio":
+            atividade.hora_inicio,
+
+        "hora_fim":
+            atividade.hora_fim,
+
+        "prioridade":
+            atividade.prioridade,
+
+        "recorrente":
+            atividade.recorrente,
+
+        "tipo_recorrencia":
+            atividade.tipo_recorrencia,
+
+        "dias_semana":
+            atividade.dias_semana,
+
+        "data_fim_recorrencia":
+            atividade.data_fim_recorrencia
+    }
+
+
+    dados_completos.update(
+        dados_atualizacao
     )
 
-    nova_hora_fim = dados_atualizacao.get(
-        "hora_fim",
-        atividade.hora_fim
-    )
 
-    if (
-        nova_hora_fim is not None
-        and nova_hora_fim <= nova_hora_inicio
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="A hora final deve ser posterior à hora inicial."
+    try:
+
+        dados_validados = (
+            AtividadeCreate(
+                **dados_completos
+            )
         )
 
-    for campo, valor in dados_atualizacao.items():
+    except ValidationError as erro:
+
+        raise HTTPException(
+            status_code=
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+
+            detail=
+                erro.errors()
+        )
+
+
+    valores_validados = (
+        dados_validados.model_dump()
+    )
+
+
+    campos_alterados = set(
+        dados_atualizacao.keys()
+    )
+
+
+    # Mudanças na recorrência podem exigir
+    # limpeza de campos relacionados.
+    if (
+        "recorrente"
+        in campos_alterados
+        or "tipo_recorrencia"
+        in campos_alterados
+    ):
+
+        campos_alterados.update(
+            {
+                "recorrente",
+                "tipo_recorrencia",
+                "dias_semana",
+                "data_fim_recorrencia"
+            }
+        )
+
+
+    for campo in campos_alterados:
+
         setattr(
             atividade,
             campo,
-            valor
+            valores_validados[campo]
         )
+
 
     db.commit()
 
-    db.refresh(atividade)
+    db.refresh(
+        atividade
+    )
+
 
     return atividade
 
@@ -237,3 +331,183 @@ def excluir_atividade(
     return Response(
         status_code=status.HTTP_204_NO_CONTENT
     )
+
+@app.get("/ocorrencias",response_model=list[OcorrenciaResponse]
+)
+def listar_ocorrencias(
+    data_inicio: date,
+    data_fim: date,
+    db: Session = Depends(get_db)
+):
+
+    if (
+        data_fim < data_inicio
+    ):
+
+        raise HTTPException(
+            status_code=
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+
+            detail=
+                "A data final deve ser posterior ou igual à data inicial."
+        )
+
+
+    quantidade_dias = (
+        data_fim
+        - data_inicio
+    ).days
+
+
+    if (
+        quantidade_dias > 62
+    ):
+
+        raise HTTPException(
+            status_code=
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+
+            detail=
+                "O intervalo máximo para consulta é de 62 dias."
+        )
+
+
+    atividades = (
+        db.query(Atividade)
+        .all()
+    )
+
+
+    ocorrencias = []
+
+
+    data_atual = data_inicio
+
+
+    while (
+        data_atual
+        <= data_fim
+    ):
+
+        for atividade in atividades:
+
+            if not atividade_ocorre_na_data(
+                atividade,
+                data_atual
+            ):
+                continue
+
+
+            ocorrencias.append(
+                {
+                    "id":
+                        atividade.id,
+
+                    "titulo":
+                        atividade.titulo,
+
+                    "descricao":
+                        atividade.descricao,
+
+                    "categoria":
+                        atividade.categoria,
+
+                    "data":
+                        data_atual,
+
+                    "hora_inicio":
+                        atividade.hora_inicio,
+
+                    "hora_fim":
+                        atividade.hora_fim,
+
+                    "prioridade":
+                        atividade.prioridade,
+
+                    "concluida":
+                        atividade.concluida,
+
+                    "recorrente":
+                        atividade.recorrente,
+
+                    "tipo_recorrencia":
+                        atividade.tipo_recorrencia
+                }
+            )
+
+
+        data_atual += timedelta(
+            days=1
+        )
+
+
+    ocorrencias.sort(
+        key=lambda ocorrencia: (
+            ocorrencia["data"],
+            ocorrencia["hora_inicio"]
+        )
+    )
+
+
+    return ocorrencias
+
+def atividade_ocorre_na_data(
+    atividade: Atividade,
+    data_consultada: date
+) -> bool:
+
+    # A recorrência ainda não começou.
+    if (
+        data_consultada
+        < atividade.data
+    ):
+        return False
+
+
+    # Atividade normal.
+    if not atividade.recorrente:
+
+        return (
+            data_consultada
+            == atividade.data
+        )
+
+
+    # A recorrência já terminou.
+    if (
+        atividade.data_fim_recorrencia
+        is not None
+        and data_consultada
+        > atividade.data_fim_recorrencia
+    ):
+        return False
+
+
+    # Recorrência diária.
+    if (
+        atividade.tipo_recorrencia
+        == "diaria"
+    ):
+        return True
+
+
+    # Recorrência semanal.
+    if (
+        atividade.tipo_recorrencia
+        == "semanal"
+    ):
+
+        dia_semana = DIAS_SEMANA[
+            data_consultada.weekday()
+        ]
+
+        return (
+            dia_semana
+            in (
+                atividade.dias_semana
+                or []
+            )
+        )
+
+
+    return False
