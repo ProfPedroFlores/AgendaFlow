@@ -149,7 +149,106 @@
                     </div>
 
                 </div>
+                <div class="campo-recorrencia">
 
+                    <label class="checkbox-recorrencia">
+
+                        <input type="checkbox" id="recorrente">
+
+                        Repetir esta atividade
+
+                    </label>
+
+
+                    <div id="painel-recorrencia" class="painel-recorrencia" hidden>
+
+                        <div class="campo">
+
+                            <label for="tipo_recorrencia">
+                                Frequência
+                            </label>
+
+                            <select id="tipo_recorrencia">
+
+                                <option value="">
+                                    Selecione
+                                </option>
+
+                                <option value="diaria">
+                                    Diariamente
+                                </option>
+
+                                <option value="semanal">
+                                    Semanalmente
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <div id="grupo-dias-semana" class="grupo-dias-semana" hidden>
+
+                            <span class="rotulo-dias">
+                                Dias da semana
+                            </span>
+
+
+                            <div class="dias-semana">
+
+                                <label>
+                                    <input type="checkbox" name="dias_semana" value="segunda">
+                                    Seg
+                                </label>
+
+                                <label>
+                                    <input type="checkbox" name="dias_semana" value="terca">
+                                    Ter
+                                </label>
+
+                                <label>
+                                    <input type="checkbox" name="dias_semana" value="quarta">
+                                    Qua
+                                </label>
+
+                                <label>
+                                    <input type="checkbox" name="dias_semana" value="quinta">
+                                    Qui
+                                </label>
+
+                                <label>
+                                    <input type="checkbox" name="dias_semana" value="sexta">
+                                    Sex
+                                </label>
+
+                                <label>
+                                    <input type="checkbox" name="dias_semana" value="sabado">
+                                    Sáb
+                                </label>
+
+                                <label>
+                                    <input type="checkbox" name="dias_semana" value="domingo">
+                                    Dom
+                                </label>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="campo">
+
+                            <label for="data_fim_recorrencia">
+                                Repetir até
+                            </label>
+
+                            <input type="date" id="data_fim_recorrencia">
+
+                        </div>
+
+                    </div>
+
+                </div>
 
                 <button type="submit" id="botao-salvar" class="botao-principal">
                     Adicionar atividade

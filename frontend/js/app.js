@@ -1,4 +1,5 @@
-const form = document.querySelector("#form-atividade");
+const form =
+    document.querySelector("#form-atividade");
 
 const listaAtividades =
     document.querySelector("#lista-atividades");
@@ -42,97 +43,152 @@ const filtroStatus =
 const botaoLimparFiltros =
     document.querySelector("#limpar-filtros");
 
+const campoRecorrente =
+    document.querySelector("#recorrente");
+
+const painelRecorrencia =
+    document.querySelector("#painel-recorrencia");
+
+const campoTipoRecorrencia =
+    document.querySelector("#tipo_recorrencia");
+
+const grupoDiasSemana =
+    document.querySelector("#grupo-dias-semana");
+
+const campoDataFimRecorrencia =
+    document.querySelector("#data_fim_recorrencia");
+
+const checkboxesDias =
+    Array.from(
+        document.querySelectorAll(
+            'input[name="dias_semana"]'
+        )
+    );
 
 const HORA_INICIAL = 6;
 const HORA_FINAL = 24;
 const ALTURA_HORA = 56;
 
-
 let atividadeEmEdicao = null;
 let atividadesCarregadas = [];
+let ocorrenciasCarregadas = [];
 
 let inicioSemanaExibida =
-    obterInicioSemana(new Date());
-
-
-// =====================================================
-// API - CARREGAR ATIVIDADES
-// =====================================================
+    obterInicioSemana(
+        new Date()
+    );
 
 async function carregarAtividades() {
-
     try {
-
         const resposta =
             await fetch("/atividades");
 
-
         if (!resposta.ok) {
-
             throw new Error(
                 `Erro ${resposta.status} ao carregar atividades.`
             );
-
         }
 
-
-        const atividades =
+        atividadesCarregadas =
             await resposta.json();
 
-
-        atividadesCarregadas =
-            atividades;
-
-
-        aplicarFiltros();
-
-
+        exibirAtividadesFiltradas();
     } catch (erro) {
-
         console.error(
             "Erro em carregarAtividades:",
             erro
         );
 
-
         listaAtividades.innerHTML = "";
-
 
         const aviso =
             document.createElement("div");
 
-
         aviso.className =
             "sem-atividades";
-
 
         aviso.textContent =
             "Erro ao carregar as atividades.";
 
-
         listaAtividades.appendChild(
             aviso
         );
-
-
-        if (agendaSemana) {
-
-            agendaSemana.innerHTML =
-                "<p>Não foi possível carregar a agenda.</p>";
-
-        }
-
     }
-
 }
 
+async function carregarOcorrenciasSemana() {
+    try {
+        const dataInicio =
+            dataParaISO(
+                inicioSemanaExibida
+            );
 
-// =====================================================
-// FILTROS
-// =====================================================
+        const dataFim =
+            dataParaISO(
+                adicionarDias(
+                    inicioSemanaExibida,
+                    6
+                )
+            );
 
-function obterAtividadesFiltradas() {
+        const parametros =
+            new URLSearchParams({
+                data_inicio:
+                    dataInicio,
 
+                data_fim:
+                    dataFim
+            });
+
+        const resposta =
+            await fetch(
+                `/ocorrencias?${parametros.toString()}`
+            );
+
+        if (!resposta.ok) {
+            throw new Error(
+                `Erro ${resposta.status} ao carregar ocorrências.`
+            );
+        }
+
+        ocorrenciasCarregadas =
+            await resposta.json();
+
+        renderizarAgendaSemanal(
+            obterOcorrenciasFiltradas()
+        );
+    } catch (erro) {
+        console.error(
+            "Erro em carregarOcorrenciasSemana:",
+            erro
+        );
+
+        ocorrenciasCarregadas = [];
+
+        agendaSemana.innerHTML = "";
+
+        const aviso =
+            document.createElement("p");
+
+        aviso.textContent =
+            "Não foi possível carregar a agenda semanal.";
+
+        agendaSemana.appendChild(
+            aviso
+        );
+    }
+}
+
+async function carregarTudo() {
+    await Promise.all([
+        carregarAtividades(),
+        carregarOcorrenciasSemana()
+    ]);
+}
+
+function atividadePassaNosFiltros(
+    atividade
+) {
     const categoriaSelecionada =
         filtroCategoria.value;
 
@@ -142,374 +198,313 @@ function obterAtividadesFiltradas() {
     const statusSelecionado =
         filtroStatus.value;
 
+    if (
+        categoriaSelecionada
+        &&
+        atividade.categoria
+        !== categoriaSelecionada
+    ) {
+        return false;
+    }
 
-    return atividadesCarregadas.filter(
-        atividade => {
+    if (
+        prioridadeSelecionada
+        &&
+        atividade.prioridade
+        !== prioridadeSelecionada
+    ) {
+        return false;
+    }
 
-            if (
-                categoriaSelecionada
-                &&
-                atividade.categoria
-                !== categoriaSelecionada
-            ) {
+    if (
+        statusSelecionado
+        === "pendentes"
+        &&
+        atividade.concluida
+    ) {
+        return false;
+    }
 
-                return false;
+    if (
+        statusSelecionado
+        === "concluidas"
+        &&
+        !atividade.concluida
+    ) {
+        return false;
+    }
 
-            }
-
-
-            if (
-                prioridadeSelecionada
-                &&
-                atividade.prioridade
-                !== prioridadeSelecionada
-            ) {
-
-                return false;
-
-            }
-
-
-            if (
-                statusSelecionado === "pendentes"
-                &&
-                atividade.concluida
-            ) {
-
-                return false;
-
-            }
-
-
-            if (
-                statusSelecionado === "concluidas"
-                &&
-                !atividade.concluida
-            ) {
-
-                return false;
-
-            }
-
-
-            return true;
-
-        }
-    );
-
+    return true;
 }
 
+function obterAtividadesFiltradas() {
+    return atividadesCarregadas.filter(
+        atividadePassaNosFiltros
+    );
+}
+
+function obterOcorrenciasFiltradas() {
+    return ocorrenciasCarregadas.filter(
+        atividadePassaNosFiltros
+    );
+}
 
 function aplicarFiltros() {
+    exibirAtividadesFiltradas();
 
+    renderizarAgendaSemanal(
+        obterOcorrenciasFiltradas()
+    );
+}
+
+function exibirAtividadesFiltradas() {
     const atividadesFiltradas =
         obterAtividadesFiltradas();
-
 
     exibirAtividades(
         atividadesFiltradas
     );
 
-
-    renderizarAgendaSemanal(
-        atividadesFiltradas
-    );
-
-
     atualizarContador(
         atividadesFiltradas.length,
         atividadesCarregadas.length
     );
-
 }
-
 
 function atualizarContador(
     quantidadeFiltrada,
     quantidadeTotal
 ) {
-
     if (
         quantidadeFiltrada
         === quantidadeTotal
     ) {
-
         contadorAtividades.textContent =
-            `${quantidadeTotal} atividade${quantidadeTotal === 1
-                ? ""
-                : "s"
+            `${quantidadeTotal} atividade${
+                quantidadeTotal === 1
+                    ? ""
+                    : "s"
             }`;
 
-
         return;
-
     }
-
 
     contadorAtividades.textContent =
         `${quantidadeFiltrada} de ${quantidadeTotal} atividades`;
-
 }
-
-
-// =====================================================
-// LISTA DE ATIVIDADES
-// =====================================================
 
 function exibirAtividades(
     atividades
 ) {
-
     listaAtividades.innerHTML = "";
-
 
     if (
         atividades.length === 0
     ) {
-
         const aviso =
             document.createElement("div");
 
-
         aviso.className =
             "sem-atividades";
-
 
         const existemFiltros =
             filtroCategoria.value
             ||
             filtroPrioridade.value
             ||
-            filtroStatus.value !== "todas";
-
+            filtroStatus.value
+            !== "todas";
 
         aviso.textContent =
             existemFiltros
                 ? "Nenhuma atividade corresponde aos filtros selecionados."
                 : "Nenhuma atividade cadastrada.";
 
-
         listaAtividades.appendChild(
             aviso
         );
 
-
         return;
-
     }
-
 
     atividades.forEach(
         atividade => {
-
-            const card =
+            listaAtividades.appendChild(
                 criarCardAtividade(
                     atividade
-                );
-
-
-            listaAtividades.appendChild(
-                card
+                )
             );
-
         }
     );
-
 }
-
 
 function criarCardAtividade(
     atividade
 ) {
-
     const card =
         document.createElement("article");
-
 
     card.className =
         "atividade";
 
-
     if (
         atividade.concluida
     ) {
-
         card.classList.add(
             "atividade-concluida"
         );
-
     }
-
 
     const cabecalho =
         document.createElement("div");
 
-
     cabecalho.className =
         "atividade-cabecalho";
-
 
     const titulo =
         document.createElement("h3");
 
-
     titulo.textContent =
         atividade.titulo;
-
 
     const prioridade =
         document.createElement("span");
 
-
     prioridade.className =
         "prioridade";
 
-
     prioridade.textContent =
         atividade.prioridade;
-
 
     cabecalho.appendChild(
         titulo
     );
 
-
     cabecalho.appendChild(
         prioridade
     );
 
-
     const categoria =
         document.createElement("p");
-
 
     categoria.textContent =
         atividade.categoria;
 
-
     const descricao =
         document.createElement("p");
-
 
     descricao.textContent =
         atividade.descricao
         ?? "Sem descrição.";
 
-
     const data =
         document.createElement("p");
-
 
     data.className =
         "atividade-data";
 
-
-    data.textContent =
-        `${formatarData(atividade.data)}
-        •
-        ${formatarHora(atividade.hora_inicio)}
-        -
-        ${formatarHora(atividade.hora_fim)}`;
-
+    if (
+        atividade.recorrente
+    ) {
+        data.textContent =
+            criarDescricaoRecorrencia(
+                atividade
+            );
+    } else {
+        data.textContent =
+            `${formatarData(
+                atividade.data
+            )} • ${formatarHora(
+                atividade.hora_inicio
+            )} - ${formatarHora(
+                atividade.hora_fim
+            )}`;
+    }
 
     card.appendChild(
         cabecalho
     );
 
-
     card.appendChild(
         categoria
     );
-
 
     card.appendChild(
         descricao
     );
 
-
     card.appendChild(
         data
     );
 
-
     if (
-        atividadeTemConflito(
+        atividadeTemConflitoNaSemana(
             atividade
         )
     ) {
-
         const avisoConflito =
             document.createElement("p");
-
 
         avisoConflito.className =
             "aviso-conflito";
 
-
         avisoConflito.textContent =
-            "Conflito de horário";
-
+            "Conflito de horário nesta semana";
 
         card.appendChild(
             avisoConflito
         );
-
     }
-
 
     const acoes =
         document.createElement("div");
 
-
     acoes.className =
         "acoes-atividade";
-
 
     const botaoConcluir =
         document.createElement("button");
 
-
     botaoConcluir.type =
         "button";
 
-
     botaoConcluir.className =
         "botao-acao";
-
 
     botaoConcluir.textContent =
         atividade.concluida
             ? "Concluída"
             : "Concluir";
 
-
     botaoConcluir.disabled =
         atividade.concluida;
 
+    if (
+        atividade.recorrente
+    ) {
+        botaoConcluir.title =
+            "Na versão atual, concluir uma atividade recorrente conclui toda a série.";
+    }
 
     botaoConcluir.addEventListener(
         "click",
         () => concluirAtividade(
-            atividade.id
+            atividade.id,
+            atividade.recorrente
         )
     );
-
 
     const botaoEditar =
         document.createElement("button");
 
-
     botaoEditar.type =
         "button";
-
 
     botaoEditar.className =
         "botao-acao";
 
-
     botaoEditar.textContent =
         "Editar";
-
 
     botaoEditar.addEventListener(
         "click",
@@ -518,63 +513,119 @@ function criarCardAtividade(
         )
     );
 
-
     const botaoExcluir =
         document.createElement("button");
-
 
     botaoExcluir.type =
         "button";
 
-
     botaoExcluir.className =
         "botao-acao botao-excluir";
-
 
     botaoExcluir.textContent =
         "Excluir";
 
-
     botaoExcluir.addEventListener(
         "click",
         () => excluirAtividade(
-            atividade.id
+            atividade.id,
+            atividade.recorrente
         )
     );
-
 
     acoes.appendChild(
         botaoConcluir
     );
 
-
     acoes.appendChild(
         botaoEditar
     );
-
 
     acoes.appendChild(
         botaoExcluir
     );
 
-
     card.appendChild(
         acoes
     );
 
-
     return card;
-
 }
 
+function criarDescricaoRecorrencia(
+    atividade
+) {
+    const horario =
+        `${formatarHora(
+            atividade.hora_inicio
+        )} - ${formatarHora(
+            atividade.hora_fim
+        )}`;
 
-// =====================================================
-// DATAS E HORÁRIOS
-// =====================================================
+    const ate =
+        atividade.data_fim_recorrencia
+            ? ` até ${formatarData(
+                atividade.data_fim_recorrencia
+            )}`
+            : "";
+
+    if (
+        atividade.tipo_recorrencia
+        === "diaria"
+    ) {
+        return (
+            `Diariamente • ${horario}${ate}`
+        );
+    }
+
+    if (
+        atividade.tipo_recorrencia
+        === "semanal"
+    ) {
+        const nomes = {
+            segunda: "Seg",
+            terca: "Ter",
+            quarta: "Qua",
+            quinta: "Qui",
+            sexta: "Sex",
+            sabado: "Sáb",
+            domingo: "Dom"
+        };
+
+        const dias =
+            (
+                atividade.dias_semana
+                ?? []
+            )
+                .map(
+                    dia =>
+                        nomes[dia]
+                        ?? dia
+                )
+                .join(
+                    ", "
+                );
+
+        return (
+            `${dias} • ${horario}${ate}`
+        );
+    }
+
+    return (
+        `${formatarData(
+            atividade.data
+        )} • ${horario}`
+    );
+}
 
 function formatarData(
     data
 ) {
+    if (
+        !data
+    ) {
+        return "";
+    }
 
     const [
         ano,
@@ -582,75 +633,41 @@ function formatarData(
         dia
     ] = data.split("-");
 
-
-    return `${dia}/${mes}/${ano}`;
-
+    return (
+        `${dia}/${mes}/${ano}`
+    );
 }
-
 
 function formatarHora(
     hora
 ) {
-
     if (
         !hora
     ) {
-
         return "--:--";
-
     }
-
 
     return hora.slice(
         0,
         5
     );
-
 }
-
 
 function definirDataAtual() {
-
     const campoData =
-        document.querySelector("#data");
-
-
-    const hoje =
-        new Date();
-
-
-    const ano =
-        hoje.getFullYear();
-
-
-    const mes =
-        String(
-            hoje.getMonth() + 1
-        ).padStart(
-            2,
-            "0"
+        document.querySelector(
+            "#data"
         );
-
-
-    const dia =
-        String(
-            hoje.getDate()
-        ).padStart(
-            2,
-            "0"
-        );
-
 
     campoData.value =
-        `${ano}-${mes}-${dia}`;
-
+        dataParaISO(
+            new Date()
+        );
 }
-
 
 function obterInicioSemana(
     data
 ) {
-
     const resultado =
         new Date(
             data.getFullYear(),
@@ -658,33 +675,26 @@ function obterInicioSemana(
             data.getDate()
         );
 
-
     const diaSemana =
         resultado.getDay();
-
 
     const deslocamento =
         diaSemana === 0
             ? -6
             : 1 - diaSemana;
 
-
     resultado.setDate(
         resultado.getDate()
         + deslocamento
     );
 
-
     return resultado;
-
 }
-
 
 function adicionarDias(
     data,
     quantidade
 ) {
-
     const resultado =
         new Date(
             data.getFullYear(),
@@ -692,25 +702,19 @@ function adicionarDias(
             data.getDate()
         );
 
-
     resultado.setDate(
         resultado.getDate()
         + quantidade
     );
 
-
     return resultado;
-
 }
-
 
 function dataParaISO(
     data
 ) {
-
     const ano =
         data.getFullYear();
-
 
     const mes =
         String(
@@ -720,7 +724,6 @@ function dataParaISO(
             "0"
         );
 
-
     const dia =
         String(
             data.getDate()
@@ -729,22 +732,19 @@ function dataParaISO(
             "0"
         );
 
-
-    return `${ano}-${mes}-${dia}`;
-
+    return (
+        `${ano}-${mes}-${dia}`
+    );
 }
-
 
 function formatarPeriodoSemana(
     inicio
 ) {
-
     const fim =
         adicionarDias(
             inicio,
             6
         );
-
 
     const inicioFormatado =
         inicio.toLocaleDateString(
@@ -754,7 +754,6 @@ function formatarPeriodoSemana(
                 month: "short"
             }
         );
-
 
     const fimFormatado =
         fim.toLocaleDateString(
@@ -766,156 +765,117 @@ function formatarPeriodoSemana(
             }
         );
 
-
-    return `${inicioFormatado} — ${fimFormatado}`;
-
+    return (
+        `${inicioFormatado} — ${fimFormatado}`
+    );
 }
-
 
 function horarioParaMinutos(
     horario
 ) {
-
     if (
         !horario
         ||
-        typeof horario !== "string"
+        typeof horario
+        !== "string"
     ) {
-
         return null;
-
     }
-
 
     const partes =
         horario.split(":");
 
-
     if (
         partes.length < 2
     ) {
-
         return null;
-
     }
-
 
     const hora =
         Number(
             partes[0]
         );
 
-
     const minuto =
         Number(
             partes[1]
         );
-
 
     if (
         Number.isNaN(hora)
         ||
         Number.isNaN(minuto)
     ) {
-
         return null;
-
     }
-
 
     return (
         hora * 60
         + minuto
     );
-
 }
-
 
 function obterIntervaloAtividade(
     atividade
 ) {
-
     const inicio =
         horarioParaMinutos(
             atividade.hora_inicio
         );
 
-
     if (
         inicio === null
     ) {
-
         return null;
-
     }
 
-
-    const fimCalculado =
+    const fim =
         atividade.hora_fim
             ? horarioParaMinutos(
                 atividade.hora_fim
             )
             : inicio + 60;
 
-
     if (
-        fimCalculado === null
+        fim === null
     ) {
-
         return null;
-
     }
-
 
     return {
         inicio,
-        fim: fimCalculado
+        fim
     };
-
 }
-
-
-// =====================================================
-// CONFLITOS
-// =====================================================
 
 function horariosConflitam(
     atividadeA,
     atividadeB
 ) {
-
     if (
         atividadeA.data
         !== atividadeB.data
     ) {
-
         return false;
-
     }
-
 
     const intervaloA =
         obterIntervaloAtividade(
             atividadeA
         );
 
-
     const intervaloB =
         obterIntervaloAtividade(
             atividadeB
         );
-
 
     if (
         intervaloA === null
         ||
         intervaloB === null
     ) {
-
         return false;
-
     }
-
 
     return (
         intervaloA.inicio
@@ -924,61 +884,70 @@ function horariosConflitam(
         intervaloA.fim
         > intervaloB.inicio
     );
-
 }
 
-
-function atividadeTemConflito(
-    atividade
+function ocorrenciaTemConflito(
+    ocorrencia
 ) {
-
-    return atividadesCarregadas.some(
-        outraAtividade => {
+    return ocorrenciasCarregadas.some(
+        outra => {
+            const mesmaOcorrencia =
+                outra.id
+                === ocorrencia.id
+                &&
+                outra.data
+                === ocorrencia.data;
 
             if (
-                outraAtividade.id
-                === atividade.id
+                mesmaOcorrencia
             ) {
-
                 return false;
-
             }
 
-
             return horariosConflitam(
-                atividade,
-                outraAtividade
+                ocorrencia,
+                outra
             );
-
         }
     );
-
 }
 
+function atividadeTemConflitoNaSemana(
+    atividade
+) {
+    return ocorrenciasCarregadas.some(
+        ocorrencia => {
+            if (
+                ocorrencia.id
+                !== atividade.id
+            ) {
+                return false;
+            }
+
+            return ocorrenciaTemConflito(
+                ocorrencia
+            );
+        }
+    );
+}
 
 function organizarConflitos(
     atividades
 ) {
-
     const eventos =
         atividades
             .map(
                 atividade => {
-
                     const intervalo =
                         obterIntervaloAtividade(
                             atividade
                         );
 
-
                     if (
                         intervalo === null
                     ) {
-
                         return null;
-
                     }
-
 
                     return {
                         atividade,
@@ -987,7 +956,6 @@ function organizarConflitos(
                         fim:
                             intervalo.fim
                     };
-
                 }
             )
             .filter(
@@ -996,136 +964,104 @@ function organizarConflitos(
             )
             .sort(
                 (a, b) => {
-
                     if (
                         a.inicio
                         !== b.inicio
                     ) {
-
                         return (
                             a.inicio
                             - b.inicio
                         );
-
                     }
-
 
                     return (
                         a.fim
                         - b.fim
                     );
-
                 }
             );
-
 
     const grupos = [];
 
     let grupoAtual = [];
-
     let fimGrupo =
         -Infinity;
 
-
     eventos.forEach(
         evento => {
-
             if (
                 grupoAtual.length === 0
                 ||
                 evento.inicio < fimGrupo
             ) {
-
                 grupoAtual.push(
                     evento
                 );
-
 
                 fimGrupo =
                     Math.max(
                         fimGrupo,
                         evento.fim
                     );
-
             } else {
-
                 grupos.push(
                     grupoAtual
                 );
-
 
                 grupoAtual = [
                     evento
                 ];
 
-
                 fimGrupo =
                     evento.fim;
-
             }
-
         }
     );
-
 
     if (
         grupoAtual.length > 0
     ) {
-
         grupos.push(
             grupoAtual
         );
-
     }
-
 
     const resultado = [];
 
-
     grupos.forEach(
         grupo => {
-
-            const fimDasColunas = [];
-
+            const fimDasColunas =
+                [];
 
             grupo.forEach(
                 evento => {
-
                     let coluna =
                         fimDasColunas.findIndex(
                             fim =>
-                                fim <= evento.inicio
+                                fim
+                                <= evento.inicio
                         );
-
 
                     if (
                         coluna === -1
                     ) {
-
                         coluna =
                             fimDasColunas.length;
-
 
                         fimDasColunas.push(
                             evento.fim
                         );
-
                     } else {
-
                         fimDasColunas[
                             coluna
                         ] =
                             evento.fim;
-
                     }
-
 
                     evento.coluna =
                         coluna;
-
                 }
             );
-
 
             const totalColunas =
                 Math.max(
@@ -1133,71 +1069,42 @@ function organizarConflitos(
                     1
                 );
 
-
             grupo.forEach(
                 evento => {
-
                     resultado.push(
                         {
                             atividade:
                                 evento.atividade,
-
                             coluna:
                                 evento.coluna,
-
                             totalColunas,
-
                             conflito:
                                 totalColunas > 1
                         }
                     );
-
                 }
             );
-
         }
     );
 
-
     return resultado;
-
 }
 
-
-// =====================================================
-// AGENDA SEMANAL
-// =====================================================
-
 function renderizarAgendaSemanal(
-    atividades
+    ocorrencias
 ) {
-
-    if (
-        !agendaSemana
-    ) {
-
-        return;
-
-    }
-
-
-    agendaSemana.innerHTML =
-        "";
-
+    agendaSemana.innerHTML = "";
 
     periodoSemana.textContent =
         formatarPeriodoSemana(
             inicioSemanaExibida
         );
 
-
     const grade =
         document.createElement("div");
 
-
     grade.className =
         "agenda-grade";
-
 
     const alturaTotal =
         (
@@ -1206,90 +1113,75 @@ function renderizarAgendaSemanal(
         )
         * ALTURA_HORA;
 
-
     grade.style.setProperty(
         "--altura-agenda",
         `${alturaTotal}px`
     );
-
 
     grade.style.setProperty(
         "--altura-hora",
         `${ALTURA_HORA}px`
     );
 
-
     const canto =
         document.createElement("div");
-
 
     canto.className =
         "agenda-canto";
 
-
     canto.textContent =
         "Horário";
-
 
     grade.appendChild(
         canto
     );
 
-
-    const diasSemana = [];
-
+    const diasSemana =
+        [];
 
     for (
         let indice = 0;
         indice < 7;
         indice++
     ) {
-
         const data =
             adicionarDias(
                 inicioSemanaExibida,
                 indice
             );
 
-
         diasSemana.push(
             data
         );
-
 
         grade.appendChild(
             criarCabecalhoDia(
                 data
             )
         );
-
     }
-
 
     grade.appendChild(
         criarColunaHoras()
     );
 
-
-    const colunasDias = [];
-
+    const colunasDias =
+        [];
 
     diasSemana.forEach(
         data => {
-
             const coluna =
-                document.createElement("div");
-
+                document.createElement(
+                    "div"
+                );
 
             coluna.className =
                 "agenda-dia-coluna";
-
 
             coluna.dataset.data =
                 dataParaISO(
                     data
                 );
-
 
             if (
                 dataParaISO(data)
@@ -1297,97 +1189,75 @@ function renderizarAgendaSemanal(
                     new Date()
                 )
             ) {
-
                 coluna.classList.add(
                     "hoje"
                 );
-
             }
-
 
             colunasDias.push(
                 coluna
             );
 
-
             grade.appendChild(
                 coluna
             );
-
         }
     );
 
-
     diasSemana.forEach(
         (data, indiceDia) => {
-
             const dataISO =
                 dataParaISO(
                     data
                 );
 
-
-            const atividadesDoDia =
-                atividades.filter(
-                    atividade =>
-                        atividade.data
+            const ocorrenciasDoDia =
+                ocorrencias.filter(
+                    ocorrencia =>
+                        ocorrencia.data
                         === dataISO
                 );
 
-
-            const atividadesOrganizadas =
+            const organizadas =
                 organizarConflitos(
-                    atividadesDoDia
+                    ocorrenciasDoDia
                 );
 
-
-            atividadesOrganizadas.forEach(
+            organizadas.forEach(
                 item => {
-
                     const bloco =
                         criarBlocoAgenda(
                             item.atividade,
                             item
                         );
 
-
                     if (
                         bloco !== null
                     ) {
-
                         colunasDias[
                             indiceDia
                         ].appendChild(
                             bloco
                         );
-
                     }
-
                 }
             );
-
         }
     );
-
 
     agendaSemana.appendChild(
         grade
     );
-
 }
-
 
 function criarCabecalhoDia(
     data
 ) {
-
     const cabecalho =
         document.createElement("div");
 
-
     cabecalho.className =
         "agenda-dia-cabecalho";
-
 
     if (
         dataParaISO(data)
@@ -1395,28 +1265,24 @@ function criarCabecalhoDia(
             new Date()
         )
     ) {
-
         cabecalho.classList.add(
             "hoje"
         );
-
     }
-
 
     const nome =
         document.createElement("span");
 
-
     nome.className =
         "agenda-dia-nome";
-
 
     nome.textContent =
         data
             .toLocaleDateString(
                 "pt-BR",
                 {
-                    weekday: "short"
+                    weekday:
+                        "short"
                 }
             )
             .replace(
@@ -1424,63 +1290,51 @@ function criarCabecalhoDia(
                 ""
             );
 
-
     const numero =
         document.createElement("span");
 
-
     numero.className =
         "agenda-dia-data";
-
 
     numero.textContent =
         data.toLocaleDateString(
             "pt-BR",
             {
-                day: "2-digit",
-                month: "2-digit"
+                day:
+                    "2-digit",
+                month:
+                    "2-digit"
             }
         );
-
 
     cabecalho.appendChild(
         nome
     );
 
-
     cabecalho.appendChild(
         numero
     );
 
-
     return cabecalho;
-
 }
 
-
 function criarColunaHoras() {
-
     const coluna =
         document.createElement("div");
 
-
     coluna.className =
         "agenda-horas";
-
 
     for (
         let hora = HORA_INICIAL;
         hora < HORA_FINAL;
         hora++
     ) {
-
         const marcador =
             document.createElement("span");
 
-
         marcador.className =
             "agenda-hora";
-
 
         marcador.textContent =
             `${String(hora).padStart(
@@ -1488,77 +1342,57 @@ function criarColunaHoras() {
                 "0"
             )}:00`;
 
-
         marcador.style.top =
-            `${(
-                hora
-                - HORA_INICIAL
-            )
-            * ALTURA_HORA
+            `${
+                (
+                    hora
+                    - HORA_INICIAL
+                )
+                * ALTURA_HORA
             }px`;
-
 
         coluna.appendChild(
             marcador
         );
-
     }
 
-
     return coluna;
-
 }
 
-
 function criarBlocoAgenda(
-    atividade,
+    ocorrencia,
     layout
 ) {
-
     const intervalo =
         obterIntervaloAtividade(
-            atividade
+            ocorrencia
         );
-
 
     if (
         intervalo === null
     ) {
-
         return null;
-
     }
 
-
-    const inicio =
-        intervalo.inicio;
-
-
-    const fim =
-        intervalo.fim;
-
-
     const limiteInicial =
-        HORA_INICIAL * 60;
-
+        HORA_INICIAL
+        * 60;
 
     const limiteFinal =
-        HORA_FINAL * 60;
-
+        HORA_FINAL
+        * 60;
 
     const inicioVisivel =
         Math.max(
-            inicio,
+            intervalo.inicio,
             limiteInicial
         );
 
-
     const fimVisivel =
         Math.min(
-            fim,
+            intervalo.fim,
             limiteFinal
         );
-
 
     if (
         fimVisivel <= limiteInicial
@@ -1567,21 +1401,16 @@ function criarBlocoAgenda(
         ||
         fimVisivel <= inicioVisivel
     ) {
-
         return null;
-
     }
-
 
     const minutosDesdeInicio =
         inicioVisivel
         - limiteInicial;
 
-
     const duracao =
         fimVisivel
         - inicioVisivel;
-
 
     const topo =
         (
@@ -1589,7 +1418,6 @@ function criarBlocoAgenda(
             / 60
         )
         * ALTURA_HORA;
-
 
     const altura =
         Math.max(
@@ -1601,184 +1429,212 @@ function criarBlocoAgenda(
             32
         );
 
-
     const bloco =
         document.createElement("button");
-
 
     bloco.type =
         "button";
 
-
     bloco.className =
         "agenda-evento";
 
-
     if (
-        atividade.concluida
+        ocorrencia.concluida
     ) {
-
         bloco.classList.add(
             "concluida"
         );
-
     }
-
 
     if (
         layout.conflito
     ) {
-
         bloco.classList.add(
             "conflito"
         );
-
     }
-
 
     bloco.style.top =
         `${topo}px`;
 
-
     bloco.style.height =
         `${altura}px`;
-
 
     const largura =
         100
         / layout.totalColunas;
 
-
     const esquerda =
         largura
         * layout.coluna;
 
-
     bloco.style.left =
         `calc(${esquerda}% + 3px)`;
-
 
     bloco.style.width =
         `calc(${largura}% - 6px)`;
 
-
     const titulo =
         document.createElement("strong");
 
-
     titulo.textContent =
-        atividade.titulo;
-
+        ocorrencia.titulo;
 
     const horario =
         document.createElement("span");
 
-
     horario.textContent =
         `${formatarHora(
-            atividade.hora_inicio
+            ocorrencia.hora_inicio
         )} - ${formatarHora(
-            atividade.hora_fim
+            ocorrencia.hora_fim
         )}`;
-
 
     const categoria =
         document.createElement("span");
 
-
     categoria.textContent =
-        atividade.categoria;
-
+        ocorrencia.categoria;
 
     bloco.appendChild(
         titulo
     );
 
-
     bloco.appendChild(
         horario
     );
-
 
     bloco.appendChild(
         categoria
     );
 
+    if (
+        ocorrencia.recorrente
+    ) {
+        const indicadorRecorrencia =
+            document.createElement("span");
+
+        indicadorRecorrencia.className =
+            "indicador-recorrencia";
+
+        indicadorRecorrencia.textContent =
+            "↻ Recorrente";
+
+        bloco.appendChild(
+            indicadorRecorrencia
+        );
+    }
 
     if (
         layout.conflito
     ) {
-
         const aviso =
             document.createElement("span");
-
 
         aviso.className =
             "indicador-conflito";
 
-
         aviso.textContent =
             "Conflito";
-
 
         bloco.appendChild(
             aviso
         );
-
     }
 
-
     bloco.title =
-        `${atividade.titulo} — clique para editar`;
-
+        `${ocorrencia.titulo} — clique para editar a atividade-base`;
 
     bloco.addEventListener(
         "click",
-        () => iniciarEdicao(
-            atividade
-        )
+        () => {
+            const atividadeBase =
+                atividadesCarregadas.find(
+                    atividade =>
+                        atividade.id
+                        === ocorrencia.id
+                );
+
+            if (
+                atividadeBase
+            ) {
+                iniciarEdicao(
+                    atividadeBase
+                );
+            }
+        }
     );
 
-
     return bloco;
-
 }
 
+function atualizarCamposRecorrencia() {
+    const recorrente =
+        campoRecorrente.checked;
 
-// =====================================================
-// EDIÇÃO
-// =====================================================
+    painelRecorrencia.hidden =
+        !recorrente;
+
+    if (
+        !recorrente
+    ) {
+        campoTipoRecorrencia.value = "";
+        campoDataFimRecorrencia.value = "";
+
+        checkboxesDias.forEach(
+            checkbox => {
+                checkbox.checked = false;
+            }
+        );
+
+        grupoDiasSemana.hidden = true;
+
+        return;
+    }
+
+    const semanal =
+        campoTipoRecorrencia.value
+        === "semanal";
+
+    grupoDiasSemana.hidden =
+        !semanal;
+}
+
+function obterDiasSemanaSelecionados() {
+    return checkboxesDias
+        .filter(
+            checkbox =>
+                checkbox.checked
+        )
+        .map(
+            checkbox =>
+                checkbox.value
+        );
+}
 
 function iniciarEdicao(
     atividade
 ) {
-
     atividadeEmEdicao =
         atividade.id;
 
-
     form.titulo.value =
         atividade.titulo;
-
 
     form.descricao.value =
         atividade.descricao
         ?? "";
 
-
     form.categoria.value =
         atividade.categoria;
 
-
     form.data.value =
         atividade.data;
-
 
     form.hora_inicio.value =
         formatarHora(
             atividade.hora_inicio
         );
-
 
     form.hora_fim.value =
         atividade.hora_fim
@@ -1787,71 +1643,93 @@ function iniciarEdicao(
             )
             : "";
 
-
     form.prioridade.value =
         atividade.prioridade;
 
+    campoRecorrente.checked =
+        atividade.recorrente;
+
+    campoTipoRecorrencia.value =
+        atividade.tipo_recorrencia
+        ?? "";
+
+    campoDataFimRecorrencia.value =
+        atividade.data_fim_recorrencia
+        ?? "";
+
+    const diasAtividade =
+        atividade.dias_semana
+        ?? [];
+
+    checkboxesDias.forEach(
+        checkbox => {
+            checkbox.checked =
+                diasAtividade.includes(
+                    checkbox.value
+                );
+        }
+    );
+
+    atualizarCamposRecorrencia();
 
     botaoSalvar.textContent =
         "Salvar alterações";
 
-
     botaoCancelarEdicao.hidden =
         false;
-
 
     mensagem.textContent =
         `Editando atividade #${atividade.id}`;
 
-
     form.titulo.focus();
-
 }
 
-
 function cancelarEdicao() {
-
     atividadeEmEdicao =
         null;
 
-
     form.reset();
-
 
     definirDataAtual();
 
+    campoRecorrente.checked =
+        false;
+
+    atualizarCamposRecorrencia();
 
     botaoSalvar.textContent =
         "Adicionar atividade";
 
-
     botaoCancelarEdicao.hidden =
         true;
 
-
     mensagem.textContent =
         "";
-
 }
-
-
-// =====================================================
-// POST / PATCH
-// =====================================================
 
 form.addEventListener(
     "submit",
     async evento => {
-
         evento.preventDefault();
 
+        mensagem.textContent = "";
 
-        mensagem.textContent =
-            "";
+        const recorrente =
+            campoRecorrente.checked;
 
+        const tipoRecorrencia =
+            recorrente
+                ? campoTipoRecorrencia.value
+                : null;
+
+        const diasSemana =
+            recorrente
+            &&
+            tipoRecorrencia === "semanal"
+                ? obterDiasSemanaSelecionados()
+                : null;
 
         const dadosAtividade = {
-
             titulo:
                 form.titulo.value.trim(),
 
@@ -1873,30 +1751,37 @@ form.addEventListener(
                 || null,
 
             prioridade:
-                form.prioridade.value
+                form.prioridade.value,
 
+            recorrente,
+
+            tipo_recorrencia:
+                tipoRecorrencia,
+
+            dias_semana:
+                diasSemana,
+
+            data_fim_recorrencia:
+                recorrente
+                    ? campoDataFimRecorrencia.value
+                    : null
         };
-
 
         const editando =
             atividadeEmEdicao
             !== null;
-
 
         const url =
             editando
                 ? `/atividades/${atividadeEmEdicao}`
                 : "/atividades";
 
-
         const metodo =
             editando
                 ? "PATCH"
                 : "POST";
 
-
         try {
-
             const resposta =
                 await fetch(
                     url,
@@ -1916,96 +1801,115 @@ form.addEventListener(
                     }
                 );
 
-
             if (
                 !resposta.ok
             ) {
-
                 const erro =
                     await resposta.json();
-
 
                 console.error(
                     "Erro ao salvar:",
                     erro
                 );
 
-
-                if (
-                    typeof erro.detail
-                    === "string"
-                ) {
-
-                    mensagem.textContent =
-                        erro.detail;
-
-                } else {
-
-                    mensagem.textContent =
-                        "Não foi possível salvar a atividade.";
-
-                }
-
+                mensagem.textContent =
+                    extrairMensagemErro(
+                        erro
+                    );
 
                 return;
-
             }
-
 
             mensagem.textContent =
                 editando
                     ? "Atividade atualizada com sucesso!"
                     : "Atividade cadastrada com sucesso!";
 
-
-            atividadeEmEdicao =
-                null;
-
+            atividadeEmEdicao = null;
 
             form.reset();
 
-
             definirDataAtual();
 
+            campoRecorrente.checked =
+                false;
+
+            atualizarCamposRecorrencia();
 
             botaoSalvar.textContent =
                 "Adicionar atividade";
 
-
             botaoCancelarEdicao.hidden =
                 true;
 
-
-            await carregarAtividades();
-
-
+            await carregarTudo();
         } catch (erro) {
-
             console.error(
                 "Erro ao comunicar com a API:",
                 erro
             );
 
-
             mensagem.textContent =
                 "Erro ao comunicar com a API.";
-
         }
-
     }
 );
 
+function extrairMensagemErro(
+    erro
+) {
+    if (
+        typeof erro.detail
+        === "string"
+    ) {
+        return erro.detail;
+    }
 
-// =====================================================
-// PATCH - CONCLUIR
-// =====================================================
+    if (
+        Array.isArray(
+            erro.detail
+        )
+    ) {
+        const primeira =
+            erro.detail[0];
+
+        if (
+            primeira
+            &&
+            primeira.msg
+        ) {
+            return primeira.msg.replace(
+                /^Value error,\s*/i,
+                ""
+            );
+        }
+    }
+
+    return (
+        "Não foi possível salvar a atividade."
+    );
+}
 
 async function concluirAtividade(
-    id
+    id,
+    recorrente = false
 ) {
+    if (
+        recorrente
+    ) {
+        const confirmarSerie =
+            window.confirm(
+                "Esta atividade é recorrente. Na versão atual, concluir marcará toda a série como concluída. Deseja continuar?"
+            );
+
+        if (
+            !confirmarSerie
+        ) {
+            return;
+        }
+    }
 
     try {
-
         const resposta =
             await fetch(
                 `/atividades/${id}/concluir`,
@@ -2015,66 +1919,50 @@ async function concluirAtividade(
                 }
             );
 
-
         if (
             !resposta.ok
         ) {
-
             throw new Error(
                 `Erro ${resposta.status} ao concluir atividade.`
             );
-
         }
-
 
         mensagem.textContent =
             "Atividade concluída!";
 
-
-        await carregarAtividades();
-
-
+        await carregarTudo();
     } catch (erro) {
-
         console.error(
             "Erro ao concluir:",
             erro
         );
 
-
         mensagem.textContent =
             "Erro ao concluir atividade.";
-
     }
-
 }
 
-
-// =====================================================
-// DELETE
-// =====================================================
-
 async function excluirAtividade(
-    id
+    id,
+    recorrente = false
 ) {
+    const texto =
+        recorrente
+            ? "Deseja realmente excluir esta atividade recorrente? Toda a série será removida."
+            : "Deseja realmente excluir esta atividade?";
 
     const confirmar =
         window.confirm(
-            "Deseja realmente excluir esta atividade?"
+            texto
         );
-
 
     if (
         !confirmar
     ) {
-
         return;
-
     }
 
-
     try {
-
         const resposta =
             await fetch(
                 `/atividades/${id}`,
@@ -2084,169 +1972,119 @@ async function excluirAtividade(
                 }
             );
 
-
         if (
             !resposta.ok
         ) {
-
             throw new Error(
                 `Erro ${resposta.status} ao excluir atividade.`
             );
-
         }
-
 
         if (
             atividadeEmEdicao
             === id
         ) {
-
             cancelarEdicao();
-
         }
 
-
         mensagem.textContent =
-            "Atividade excluída com sucesso!";
+            recorrente
+                ? "Série recorrente excluída com sucesso!"
+                : "Atividade excluída com sucesso!";
 
-
-        await carregarAtividades();
-
-
+        await carregarTudo();
     } catch (erro) {
-
         console.error(
             "Erro ao excluir:",
             erro
         );
 
-
         mensagem.textContent =
             "Erro ao excluir atividade.";
-
     }
-
 }
-
-
-// =====================================================
-// EVENTOS DOS FILTROS
-// =====================================================
 
 filtroCategoria.addEventListener(
     "change",
     aplicarFiltros
 );
 
-
 filtroPrioridade.addEventListener(
     "change",
     aplicarFiltros
 );
-
 
 filtroStatus.addEventListener(
     "change",
     aplicarFiltros
 );
 
-
 botaoLimparFiltros.addEventListener(
     "click",
     () => {
-
-        filtroCategoria.value =
-            "";
-
-
-        filtroPrioridade.value =
-            "";
-
-
-        filtroStatus.value =
-            "todas";
-
+        filtroCategoria.value = "";
+        filtroPrioridade.value = "";
+        filtroStatus.value = "todas";
 
         aplicarFiltros();
-
     }
 );
 
+campoRecorrente.addEventListener(
+    "change",
+    atualizarCamposRecorrencia
+);
 
-// =====================================================
-// NAVEGAÇÃO DA SEMANA
-// =====================================================
+campoTipoRecorrencia.addEventListener(
+    "change",
+    atualizarCamposRecorrencia
+);
 
 botaoSemanaAnterior.addEventListener(
     "click",
-    () => {
-
+    async () => {
         inicioSemanaExibida =
             adicionarDias(
                 inicioSemanaExibida,
                 -7
             );
 
-
-        renderizarAgendaSemanal(
-            obterAtividadesFiltradas()
-        );
-
+        await carregarOcorrenciasSemana();
     }
 );
 
-
 botaoSemanaAtual.addEventListener(
     "click",
-    () => {
-
+    async () => {
         inicioSemanaExibida =
             obterInicioSemana(
                 new Date()
             );
 
-
-        renderizarAgendaSemanal(
-            obterAtividadesFiltradas()
-        );
-
+        await carregarOcorrenciasSemana();
     }
 );
 
-
 botaoSemanaProxima.addEventListener(
     "click",
-    () => {
-
+    async () => {
         inicioSemanaExibida =
             adicionarDias(
                 inicioSemanaExibida,
                 7
             );
 
-
-        renderizarAgendaSemanal(
-            obterAtividadesFiltradas()
-        );
-
+        await carregarOcorrenciasSemana();
     }
 );
-
-
-// =====================================================
-// BOTÃO CANCELAR EDIÇÃO
-// =====================================================
 
 botaoCancelarEdicao.addEventListener(
     "click",
     cancelarEdicao
 );
 
-
-// =====================================================
-// INICIALIZAÇÃO
-// =====================================================
-
 definirDataAtual();
 
-carregarAtividades();
+atualizarCamposRecorrencia();
+
+carregarTudo();

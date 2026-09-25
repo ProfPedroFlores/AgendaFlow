@@ -742,3 +742,98 @@ h2 {
     }
 
 }
+
+.campo-recorrencia {
+    margin-bottom: 18px;
+}
+
+
+.checkbox-recorrencia {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+}
+
+
+.checkbox-recorrencia input {
+    width: auto;
+}
+
+
+.painel-recorrencia {
+    margin-top: 14px;
+
+    padding: 14px;
+
+    border: 1px solid #dddddd;
+
+    border-radius: 8px;
+
+    background-color: #f7f7f7;
+}
+
+
+.grupo-dias-semana {
+    margin-bottom: 16px;
+}
+
+
+.rotulo-dias {
+    display: block;
+
+    margin-bottom: 8px;
+
+    font-size: 14px;
+
+    font-weight: bold;
+}
+
+
+.dias-semana {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 8px;
+}
+
+
+.dias-semana label {
+    display: flex;
+
+    align-items: center;
+
+    gap: 5px;
+
+    padding: 7px 9px;
+
+    border: 1px solid #cccccc;
+
+    border-radius: 6px;
+
+    background-color: #ffffff;
+
+    cursor: pointer;
+
+    font-size: 13px;
+}
+
+
+.dias-semana input {
+    width: auto;
+}
+
+
+.indicador-recorrencia {
+    margin-top: 3px;
+
+    font-size: 10px;
+
+    font-weight: bold;
+}
