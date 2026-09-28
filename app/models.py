@@ -100,6 +100,11 @@ class Atividade(Base):
         server_default=func.now()
     )
 
+    lembrete_minutos: Mapped[int | None] = mapped_column(
+    Integer,
+    nullable=True
+)
+
 class OcorrenciaConcluida(Base):
     __tablename__ = "ocorrencias_concluidas"
 

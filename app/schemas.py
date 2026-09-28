@@ -49,6 +49,11 @@ class AtividadeBase(BaseModel):
         "alta"
     ] = "media"
 
+    lembrete_minutos: int | None = Field(
+        default=None,
+        ge=0,
+        le=1440
+    )
 
     recorrente: bool = False
 
@@ -180,6 +185,11 @@ class AtividadeUpdate(BaseModel):
         "alta"
     ] | None = None
 
+    lembrete_minutos: int | None = Field(
+        default=None,
+        ge=0,
+        le=1440
+    )
 
     recorrente: bool | None = None
 
@@ -227,6 +237,8 @@ class OcorrenciaResponse(BaseModel):
         "media",
         "alta"
     ]
+    
+    lembrete_minutos: int | None
 
     concluida: bool
 

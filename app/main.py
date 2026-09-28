@@ -196,6 +196,9 @@ def atualizar_atividade(
 
         "prioridade":
             atividade.prioridade,
+        
+        "lembrete_minutos":
+            atividade.lembrete_minutos,
 
         "recorrente":
             atividade.recorrente,
@@ -207,7 +210,7 @@ def atualizar_atividade(
             atividade.dias_semana,
 
         "data_fim_recorrencia":
-            atividade.data_fim_recorrencia
+            atividade.data_fim_recorrencia,
     }
 
 
@@ -473,6 +476,9 @@ def listar_ocorrencias(
 
                     "prioridade":
                         atividade.prioridade,
+
+                    "lembrete_minutos":
+                        atividade.lembrete_minutos,
 
                     "concluida":
                         concluida,

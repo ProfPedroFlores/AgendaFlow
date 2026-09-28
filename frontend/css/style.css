@@ -861,3 +861,124 @@ h2 {
 
     text-decoration: line-through;
 }
+
+.controles-alertas {
+    display: flex;
+
+    align-items: center;
+
+    flex-wrap: wrap;
+
+    gap: 12px;
+
+    margin-top: 16px;
+}
+
+
+.botao-alertas {
+    padding: 9px 14px;
+
+    border: 1px solid #cccccc;
+
+    border-radius: 6px;
+
+    background-color: #ffffff;
+
+    cursor: pointer;
+}
+
+
+.botao-alertas:hover {
+    background-color: #f0f0f0;
+}
+
+
+#status-alertas {
+    font-size: 13px;
+
+    color: #666666;
+}
+
+
+.aviso-lembrete {
+    position: fixed;
+
+    right: 24px;
+
+    bottom: 24px;
+
+    z-index: 9999;
+
+    width: min(
+        380px,
+        calc(100% - 48px)
+    );
+
+    display: flex;
+
+    align-items: flex-start;
+
+    gap: 12px;
+
+    padding: 18px;
+
+    border: 1px solid #cccccc;
+
+    border-radius: 10px;
+
+    background-color: #ffffff;
+
+    box-shadow:
+        0 8px 30px
+        rgba(0, 0, 0, 0.15);
+}
+
+
+.aviso-lembrete[hidden] {
+    display: none;
+}
+
+
+.icone-aviso {
+    font-size: 24px;
+}
+
+
+.aviso-lembrete strong {
+    display: block;
+
+    margin-bottom: 4px;
+}
+
+
+.aviso-lembrete p {
+    margin: 0;
+
+    color: #555555;
+}
+
+
+.fechar-aviso {
+    position: absolute;
+
+    top: 5px;
+
+    right: 8px;
+
+    border: none;
+
+    background: transparent;
+
+    font-size: 20px;
+
+    cursor: pointer;
+}
+
+
+.indicador-lembrete-card {
+    margin: 8px 0;
+
+    font-size: 12px;
+
+    color: #555555;
+}

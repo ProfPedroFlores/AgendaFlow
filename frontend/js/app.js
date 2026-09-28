@@ -43,6 +43,24 @@ const filtroStatus =
 const botaoLimparFiltros =
     document.querySelector("#limpar-filtros");
 
+const botaoAtivarAlertas =
+    document.querySelector("#ativar-alertas");
+
+const statusAlertas =
+    document.querySelector("#status-alertas");
+
+const avisoLembrete =
+    document.querySelector("#aviso-lembrete");
+
+const avisoLembreteTitulo =
+    document.querySelector("#aviso-lembrete-titulo");
+
+const avisoLembreteTexto =
+    document.querySelector("#aviso-lembrete-texto");
+
+const botaoFecharAvisoLembrete =
+    document.querySelector("#fechar-aviso-lembrete");
+
 const campoRecorrente =
     document.querySelector("#recorrente");
 
@@ -58,6 +76,9 @@ const grupoDiasSemana =
 const campoDataFimRecorrencia =
     document.querySelector("#data_fim_recorrencia");
 
+const campoLembreteMinutos =
+    document.querySelector("#lembrete_minutos");
+
 const checkboxesDias =
     Array.from(
         document.querySelectorAll(
@@ -72,6 +93,12 @@ const ALTURA_HORA = 56;
 let atividadeEmEdicao = null;
 let atividadesCarregadas = [];
 let ocorrenciasCarregadas = [];
+
+let audioContext = null;
+let alertasAtivadosNestaSessao = false;
+
+const INTERVALO_VERIFICACAO_LEMBRETES = 30000;
+const PREFIXO_LEMBRETE_ENVIADO = "agendaflow:lembrete:";
 
 let inicioSemanaExibida =
     obterInicioSemana(
@@ -475,6 +502,29 @@ function criarCardAtividade(
         );
     }
 
+    if (
+        atividade.lembrete_minutos
+        !== null
+        &&
+        atividade.lembrete_minutos
+        !== undefined
+    ) {
+        const lembrete =
+            document.createElement("p");
+
+        lembrete.className =
+            "indicador-lembrete-card";
+
+        lembrete.textContent =
+            `🔔 ${formatarLembrete(
+                atividade.lembrete_minutos
+            )}`;
+
+        card.appendChild(
+            lembrete
+        );
+    }
+
     const acoes =
         document.createElement("div");
 
@@ -632,6 +682,39 @@ function criarDescricaoRecorrencia(
         )} • ${horario}`
     );
 }
+
+function formatarLembrete(
+    minutos
+) {
+    if (
+        minutos === null
+        ||
+        minutos === undefined
+    ) {
+        return "Sem lembrete";
+    }
+
+    if (
+        Number(minutos) === 0
+    ) {
+        return "No horário";
+    }
+
+    if (
+        Number(minutos) === 60
+    ) {
+        return "1 hora antes";
+    }
+
+    if (
+        Number(minutos) % 60 === 0
+    ) {
+        return `${Number(minutos) / 60} horas antes`;
+    }
+
+    return `${minutos} minutos antes`;
+}
+
 
 function formatarData(
     data
@@ -1694,6 +1777,10 @@ function iniciarEdicao(
     form.prioridade.value =
         atividade.prioridade;
 
+    campoLembreteMinutos.value =
+        atividade.lembrete_minutos
+        ?? "";
+
     campoRecorrente.checked =
         atividade.recorrente;
 
@@ -1800,6 +1887,13 @@ form.addEventListener(
 
             prioridade:
                 form.prioridade.value,
+
+            lembrete_minutos:
+                campoLembreteMinutos.value === ""
+                    ? null
+                    : Number(
+                        campoLembreteMinutos.value
+                    ),
 
             recorrente,
 
@@ -2105,6 +2199,575 @@ async function excluirAtividade(
     }
 }
 
+function criarDataHoraLocal(
+    dataISO,
+    horario
+) {
+    const [
+        ano,
+        mes,
+        dia
+    ] = dataISO
+        .split("-")
+        .map(Number);
+
+    const partesHora =
+        horario
+            .split(":")
+            .map(Number);
+
+    const hora =
+        partesHora[0]
+        ?? 0;
+
+    const minuto =
+        partesHora[1]
+        ?? 0;
+
+    const segundo =
+        partesHora[2]
+        ?? 0;
+
+    return new Date(
+        ano,
+        mes - 1,
+        dia,
+        hora,
+        minuto,
+        segundo,
+        0
+    );
+}
+
+
+function criarChaveLembrete(
+    ocorrencia
+) {
+    return (
+        `${PREFIXO_LEMBRETE_ENVIADO}`
+        + `${ocorrencia.id}:`
+        + `${ocorrencia.data}:`
+        + `${ocorrencia.hora_inicio}:`
+        + `${ocorrencia.lembrete_minutos}`
+    );
+}
+
+
+function limparHistoricoLembretesAntigos() {
+    const hoje =
+        dataParaISO(
+            new Date()
+        );
+
+    const chavesParaRemover =
+        [];
+
+    for (
+        let indice = 0;
+        indice < localStorage.length;
+        indice++
+    ) {
+        const chave =
+            localStorage.key(
+                indice
+            );
+
+        if (
+            chave
+            &&
+            chave.startsWith(
+                PREFIXO_LEMBRETE_ENVIADO
+            )
+            &&
+            !chave.includes(
+                `:${hoje}:`
+            )
+        ) {
+            chavesParaRemover.push(
+                chave
+            );
+        }
+    }
+
+    chavesParaRemover.forEach(
+        chave =>
+            localStorage.removeItem(
+                chave
+            )
+    );
+}
+
+
+async function ativarAlertas() {
+    alertasAtivadosNestaSessao =
+        true;
+
+    const AudioContextClasse =
+        window.AudioContext
+        || window.webkitAudioContext;
+
+    if (
+        AudioContextClasse
+    ) {
+        try {
+            if (
+                audioContext === null
+            ) {
+                audioContext =
+                    new AudioContextClasse();
+            }
+
+            if (
+                audioContext.state
+                === "suspended"
+            ) {
+                await audioContext.resume();
+            }
+        } catch (erro) {
+            console.warn(
+                "Não foi possível ativar o áudio:",
+                erro
+            );
+        }
+    }
+
+    if (
+        "Notification"
+        in window
+    ) {
+        try {
+            if (
+                Notification.permission
+                === "default"
+            ) {
+                await Notification.requestPermission();
+            }
+        } catch (erro) {
+            console.warn(
+                "Não foi possível solicitar notificações:",
+                erro
+            );
+        }
+    }
+
+    atualizarStatusAlertas();
+
+    tocarSomLembrete(
+        true
+    );
+
+    verificarLembretes();
+}
+
+
+function atualizarStatusAlertas() {
+    if (
+        !statusAlertas
+        ||
+        !botaoAtivarAlertas
+    ) {
+        return;
+    }
+
+    if (
+        !alertasAtivadosNestaSessao
+    ) {
+        statusAlertas.textContent =
+            "Alertas ainda não ativados nesta sessão.";
+
+        botaoAtivarAlertas.textContent =
+            "Ativar alertas";
+
+        return;
+    }
+
+    if (
+        "Notification"
+        in window
+        &&
+        Notification.permission
+        === "granted"
+    ) {
+        statusAlertas.textContent =
+            "Som e notificações do sistema ativos.";
+
+        botaoAtivarAlertas.textContent =
+            "Alertas ativos";
+
+        return;
+    }
+
+    if (
+        "Notification"
+        in window
+        &&
+        Notification.permission
+        === "denied"
+    ) {
+        statusAlertas.textContent =
+            "Som ativo; notificações do sistema estão bloqueadas no navegador.";
+
+        botaoAtivarAlertas.textContent =
+            "Som ativo";
+
+        return;
+    }
+
+    statusAlertas.textContent =
+        "Som ativo; pop-ups internos disponíveis.";
+
+    botaoAtivarAlertas.textContent =
+        "Som ativo";
+}
+
+
+function tocarSomLembrete(
+    teste = false
+) {
+    if (
+        !audioContext
+        ||
+        audioContext.state
+        !== "running"
+    ) {
+        return;
+    }
+
+    const agora =
+        audioContext.currentTime;
+
+    const frequencias =
+        teste
+            ? [660]
+            : [660, 880];
+
+    frequencias.forEach(
+        (frequencia, indice) => {
+            const oscilador =
+                audioContext.createOscillator();
+
+            const ganho =
+                audioContext.createGain();
+
+            oscilador.type =
+                "sine";
+
+            oscilador.frequency.value =
+                frequencia;
+
+            const inicio =
+                agora
+                + (
+                    indice
+                    * 0.28
+                );
+
+            ganho.gain.setValueAtTime(
+                0.0001,
+                inicio
+            );
+
+            ganho.gain.exponentialRampToValueAtTime(
+                0.18,
+                inicio + 0.02
+            );
+
+            ganho.gain.exponentialRampToValueAtTime(
+                0.0001,
+                inicio + 0.22
+            );
+
+            oscilador.connect(
+                ganho
+            );
+
+            ganho.connect(
+                audioContext.destination
+            );
+
+            oscilador.start(
+                inicio
+            );
+
+            oscilador.stop(
+                inicio + 0.24
+            );
+        }
+    );
+}
+
+
+function mostrarPopupLembrete(
+    ocorrencia,
+    texto
+) {
+    if (
+        !avisoLembrete
+    ) {
+        return;
+    }
+
+    avisoLembreteTitulo.textContent =
+        ocorrencia.titulo;
+
+    avisoLembreteTexto.textContent =
+        texto;
+
+    avisoLembrete.hidden =
+        false;
+}
+
+
+function fecharPopupLembrete() {
+    if (
+        avisoLembrete
+    ) {
+        avisoLembrete.hidden =
+            true;
+    }
+}
+
+
+function mostrarNotificacaoSistema(
+    ocorrencia,
+    texto
+) {
+    if (
+        !(
+            "Notification"
+            in window
+        )
+        ||
+        Notification.permission
+        !== "granted"
+    ) {
+        return;
+    }
+
+    try {
+        const notificacao =
+            new Notification(
+                `AgendaFlow — ${ocorrencia.titulo}`,
+                {
+                    body:
+                        texto
+                }
+            );
+
+        notificacao.onclick =
+            () => {
+                window.focus();
+
+                notificacao.close();
+            };
+    } catch (erro) {
+        console.warn(
+            "Falha ao criar notificação:",
+            erro
+        );
+    }
+}
+
+
+function criarTextoLembrete(
+    ocorrencia,
+    inicio
+) {
+    const agora =
+        new Date();
+
+    const diferencaMinutos =
+        Math.ceil(
+            (
+                inicio.getTime()
+                - agora.getTime()
+            )
+            / 60000
+        );
+
+    if (
+        diferencaMinutos <= 0
+    ) {
+        return (
+            `Começa agora, às ${formatarHora(
+                ocorrencia.hora_inicio
+            )}.`
+        );
+    }
+
+    if (
+        diferencaMinutos === 1
+    ) {
+        return (
+            `Começa em 1 minuto, às ${formatarHora(
+                ocorrencia.hora_inicio
+            )}.`
+        );
+    }
+
+    return (
+        `Começa em ${diferencaMinutos} minutos, às ${formatarHora(
+            ocorrencia.hora_inicio
+        )}.`
+    );
+}
+
+
+function dispararLembrete(
+    ocorrencia,
+    inicio
+) {
+    const texto =
+        criarTextoLembrete(
+            ocorrencia,
+            inicio
+        );
+
+    mostrarPopupLembrete(
+        ocorrencia,
+        texto
+    );
+
+    mostrarNotificacaoSistema(
+        ocorrencia,
+        texto
+    );
+
+    tocarSomLembrete();
+}
+
+
+async function verificarLembretes() {
+    try {
+        const agora =
+            new Date();
+
+        const hojeISO =
+            dataParaISO(
+                agora
+            );
+
+        const parametros =
+            new URLSearchParams({
+                data_inicio:
+                    hojeISO,
+
+                data_fim:
+                    hojeISO
+            });
+
+        const resposta =
+            await fetch(
+                `/ocorrencias?${parametros.toString()}`
+            );
+
+        if (
+            !resposta.ok
+        ) {
+            return;
+        }
+
+        const ocorrencias =
+            await resposta.json();
+
+        ocorrencias.forEach(
+            ocorrencia => {
+                if (
+                    ocorrencia.concluida
+                    ||
+                    ocorrencia.lembrete_minutos
+                    === null
+                    ||
+                    ocorrencia.lembrete_minutos
+                    === undefined
+                ) {
+                    return;
+                }
+
+                const inicio =
+                    criarDataHoraLocal(
+                        ocorrencia.data,
+                        ocorrencia.hora_inicio
+                    );
+
+                const momentoLembrete =
+                    new Date(
+                        inicio.getTime()
+                        - (
+                            Number(
+                                ocorrencia.lembrete_minutos
+                            )
+                            * 60000
+                        )
+                    );
+
+                const limiteAtraso =
+                    new Date(
+                        inicio.getTime()
+                        + 5 * 60000
+                    );
+
+                if (
+                    agora < momentoLembrete
+                    ||
+                    agora > limiteAtraso
+                ) {
+                    return;
+                }
+
+                const chave =
+                    criarChaveLembrete(
+                        ocorrencia
+                    );
+
+                if (
+                    localStorage.getItem(
+                        chave
+                    )
+                ) {
+                    return;
+                }
+
+                localStorage.setItem(
+                    chave,
+                    new Date().toISOString()
+                );
+
+                dispararLembrete(
+                    ocorrencia,
+                    inicio
+                );
+            }
+        );
+    } catch (erro) {
+        console.warn(
+            "Falha ao verificar lembretes:",
+            erro
+        );
+    }
+}
+
+
+if (
+    botaoAtivarAlertas
+) {
+    botaoAtivarAlertas.addEventListener(
+        "click",
+        ativarAlertas
+    );
+}
+
+
+if (
+    botaoFecharAvisoLembrete
+) {
+    botaoFecharAvisoLembrete.addEventListener(
+        "click",
+        fecharPopupLembrete
+    );
+}
+
+
 filtroCategoria.addEventListener(
     "change",
     aplicarFiltros
@@ -2188,4 +2851,15 @@ definirDataAtual();
 
 atualizarCamposRecorrencia();
 
+atualizarStatusAlertas();
+
+limparHistoricoLembretesAntigos();
+
 carregarTudo();
+
+verificarLembretes();
+
+setInterval(
+    verificarLembretes,
+    INTERVALO_VERIFICACAO_LEMBRETES
+);
