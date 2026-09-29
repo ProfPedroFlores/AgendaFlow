@@ -79,6 +79,9 @@ const campoDataFimRecorrencia =
 const campoLembreteMinutos =
     document.querySelector("#lembrete_minutos");
 
+const botaoAlternarTema =
+    document.querySelector("#alternar-tema");
+
 const checkboxesDias =
     Array.from(
         document.querySelectorAll(
@@ -2846,6 +2849,70 @@ botaoCancelarEdicao.addEventListener(
     "click",
     cancelarEdicao
 );
+
+function aplicarTema(tema) {
+
+    document.body.dataset.theme =
+        tema;
+
+
+    localStorage.setItem(
+        "agendaflow:tema",
+        tema
+    );
+
+
+    if (
+        botaoAlternarTema
+    ) {
+
+        botaoAlternarTema.textContent =
+            tema === "dark"
+                ? "☀️ Tema claro"
+                : "🌙 Tema escuro";
+
+    }
+
+}
+
+
+function carregarTema() {
+
+    const temaSalvo =
+        localStorage.getItem(
+            "agendaflow:tema"
+        );
+
+
+    aplicarTema(
+        temaSalvo || "dark"
+    );
+
+}
+
+
+botaoAlternarTema.addEventListener(
+    "click",
+    () => {
+
+        const temaAtual =
+            document.body.dataset.theme;
+
+
+        const novoTema =
+            temaAtual === "dark"
+                ? "light"
+                : "dark";
+
+
+        aplicarTema(
+            novoTema
+        );
+
+    }
+);
+
+carregarTema();
 
 definirDataAtual();
 

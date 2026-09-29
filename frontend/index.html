@@ -1,337 +1,343 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
- <head>
-  <meta charset="utf-8"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>
-   AgendaFlow
-  </title>
-  <link href="/static/css/style.css" rel="stylesheet"/>
- </head>
- <body>
-  <header class="cabecalho">
-   <div>
-    <h1>
-     AgendaFlow
-    </h1>
-    <p>
-     Organize suas atividades e seu tempo.
-    </p>
-   </div>
-   <div class="controles-alertas">
-    <button class="botao-alertas" id="ativar-alertas" type="button">
-     Ativar alertas
-    </button>
-    <span id="status-alertas">
-     Alertas ainda não ativados nesta sessão.
-    </span>
-   </div>
-  </header>
-  <main class="container">
-   <section class="painel-formulario">
-    <h2>
-     Nova atividade
-    </h2>
-    <form id="form-atividade">
-     <div class="campo">
-      <label for="titulo">
-       Título
-      </label>
-      <input id="titulo" maxlength="120" minlength="3" name="titulo" required="" type="text"/>
-     </div>
-     <div class="campo">
-      <label for="descricao">
-       Descrição
-      </label>
-      <textarea id="descricao" name="descricao" rows="3"></textarea>
-     </div>
-     <div class="linha-formulario">
-      <div class="campo">
-       <label for="categoria">
-        Categoria
-       </label>
-       <select id="categoria" name="categoria">
-        <option value="Pessoal">
-         Pessoal
-        </option>
-        <option value="Trabalho">
-         Trabalho
-        </option>
-        <option value="Mestrado">
-         Mestrado
-        </option>
-        <option value="Aula">
-         Aula
-        </option>
-        <option value="Tutoria">
-         Tutoria
-        </option>
-       </select>
-      </div>
-      <div class="campo">
-       <label for="prioridade">
-        Prioridade
-       </label>
-       <select id="prioridade" name="prioridade">
-        <option value="baixa">
-         Baixa
-        </option>
-        <option selected="" value="media">
-         Média
-        </option>
-        <option value="alta">
-         Alta
-        </option>
-       </select>
-      </div>
-     </div>
-     <div class="campo">
-      <label for="lembrete_minutos">
-       Lembrete
-      </label>
-      <select id="lembrete_minutos" name="lembrete_minutos">
-       <option value="">
-        Sem lembrete
-       </option>
-       <option value="0">
-        No horário
-       </option>
-       <option value="10">
-        10 minutos antes
-       </option>
-       <option value="30">
-        30 minutos antes
-       </option>
-       <option value="60">
-        1 hora antes
-       </option>
-      </select>
-     </div>
-     <div class="linha-formulario">
-      <div class="campo">
-       <label for="data">
-        Data
-       </label>
-       <input id="data" name="data" required="" type="date"/>
-      </div>
-      <div class="campo">
-       <label for="hora_inicio">
-        Início
-       </label>
-       <input id="hora_inicio" name="hora_inicio" required="" type="time"/>
-      </div>
-      <div class="campo">
-       <label for="hora_fim">
-        Fim
-       </label>
-       <input id="hora_fim" name="hora_fim" type="time"/>
-      </div>
-     </div>
-     <div class="campo-recorrencia">
-      <label class="checkbox-recorrencia">
-       <input id="recorrente" type="checkbox"/>
-       Repetir esta atividade
-      </label>
-      <div class="painel-recorrencia" hidden="" id="painel-recorrencia">
-       <div class="campo">
-        <label for="tipo_recorrencia">
-         Frequência
-        </label>
-        <select id="tipo_recorrencia">
-         <option value="">
-          Selecione
-         </option>
-         <option value="diaria">
-          Diariamente
-         </option>
-         <option value="semanal">
-          Semanalmente
-         </option>
-        </select>
-       </div>
-       <div class="grupo-dias-semana" hidden="" id="grupo-dias-semana">
-        <span class="rotulo-dias">
-         Dias da semana
-        </span>
-        <div class="dias-semana">
-         <label>
-          <input name="dias_semana" type="checkbox" value="segunda"/>
-          Seg
-         </label>
-         <label>
-          <input name="dias_semana" type="checkbox" value="terca"/>
-          Ter
-         </label>
-         <label>
-          <input name="dias_semana" type="checkbox" value="quarta"/>
-          Qua
-         </label>
-         <label>
-          <input name="dias_semana" type="checkbox" value="quinta"/>
-          Qui
-         </label>
-         <label>
-          <input name="dias_semana" type="checkbox" value="sexta"/>
-          Sex
-         </label>
-         <label>
-          <input name="dias_semana" type="checkbox" value="sabado"/>
-          Sáb
-         </label>
-         <label>
-          <input name="dias_semana" type="checkbox" value="domingo"/>
-          Dom
-         </label>
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>
+        AgendaFlow
+    </title>
+    <link href="/static/css/style.css" rel="stylesheet" />
+</head>
+
+<body>
+    <header class="cabecalho">
+        <div>
+            <h1>
+                AgendaFlow
+            </h1>
+            <p>
+                Organize suas atividades e seu tempo.
+            </p>
         </div>
-       </div>
-       <div class="campo">
-        <label for="data_fim_recorrencia">
-         Repetir até
-        </label>
-        <input id="data_fim_recorrencia" type="date"/>
-       </div>
-      </div>
-     </div>
-     <button class="botao-principal" id="botao-salvar" type="submit">
-      Adicionar atividade
-     </button>
-     <button class="botao-secundario" hidden="" id="botao-cancelar-edicao" type="button">
-      Cancelar edição
-     </button>
-     <p class="mensagem" id="mensagem">
-     </p>
-    </form>
-   </section>
-   <section class="painel-atividades">
-    <div class="titulo-secao">
-     <div>
-      <h2>
-       Agenda semanal
-      </h2>
-      <p>
-       Visualize a distribuição das suas atividades durante a semana.
-      </p>
-     </div>
-     <span id="contador-atividades">
-      0 atividades
-     </span>
+        <div class="controles-alertas">
+            <button class="botao-alertas" id="ativar-alertas" type="button">
+                Ativar alertas
+            </button>
+            <button type="button" id="alternar-tema" class="botao-tema">
+                ☀️ Tema claro
+            </button>
+            <span id="status-alertas">
+                Alertas ainda não ativados nesta sessão.
+            </span>
+        </div>
+    </header>
+    <main class="container">
+        <section class="painel-formulario">
+            <h2>
+                Nova atividade
+            </h2>
+            <form id="form-atividade">
+                <div class="campo">
+                    <label for="titulo">
+                        Título
+                    </label>
+                    <input id="titulo" maxlength="120" minlength="3" name="titulo" required="" type="text" />
+                </div>
+                <div class="campo">
+                    <label for="descricao">
+                        Descrição
+                    </label>
+                    <textarea id="descricao" name="descricao" rows="3"></textarea>
+                </div>
+                <div class="linha-formulario">
+                    <div class="campo">
+                        <label for="categoria">
+                            Categoria
+                        </label>
+                        <select id="categoria" name="categoria">
+                            <option value="Pessoal">
+                                Pessoal
+                            </option>
+                            <option value="Trabalho">
+                                Trabalho
+                            </option>
+                            <option value="Mestrado">
+                                Mestrado
+                            </option>
+                            <option value="Aula">
+                                Aula
+                            </option>
+                            <option value="Tutoria">
+                                Tutoria
+                            </option>
+                        </select>
+                    </div>
+                    <div class="campo">
+                        <label for="prioridade">
+                            Prioridade
+                        </label>
+                        <select id="prioridade" name="prioridade">
+                            <option value="baixa">
+                                Baixa
+                            </option>
+                            <option selected="" value="media">
+                                Média
+                            </option>
+                            <option value="alta">
+                                Alta
+                            </option>
+                        </select>
+                    </div>
+                </div>
+                <div class="campo">
+                    <label for="lembrete_minutos">
+                        Lembrete
+                    </label>
+                    <select id="lembrete_minutos" name="lembrete_minutos">
+                        <option value="">
+                            Sem lembrete
+                        </option>
+                        <option value="0">
+                            No horário
+                        </option>
+                        <option value="10">
+                            10 minutos antes
+                        </option>
+                        <option value="30">
+                            30 minutos antes
+                        </option>
+                        <option value="60">
+                            1 hora antes
+                        </option>
+                    </select>
+                </div>
+                <div class="linha-formulario">
+                    <div class="campo">
+                        <label for="data">
+                            Data
+                        </label>
+                        <input id="data" name="data" required="" type="date" />
+                    </div>
+                    <div class="campo">
+                        <label for="hora_inicio">
+                            Início
+                        </label>
+                        <input id="hora_inicio" name="hora_inicio" required="" type="time" />
+                    </div>
+                    <div class="campo">
+                        <label for="hora_fim">
+                            Fim
+                        </label>
+                        <input id="hora_fim" name="hora_fim" type="time" />
+                    </div>
+                </div>
+                <div class="campo-recorrencia">
+                    <label class="checkbox-recorrencia">
+                        <input id="recorrente" type="checkbox" />
+                        Repetir esta atividade
+                    </label>
+                    <div class="painel-recorrencia" hidden="" id="painel-recorrencia">
+                        <div class="campo">
+                            <label for="tipo_recorrencia">
+                                Frequência
+                            </label>
+                            <select id="tipo_recorrencia">
+                                <option value="">
+                                    Selecione
+                                </option>
+                                <option value="diaria">
+                                    Diariamente
+                                </option>
+                                <option value="semanal">
+                                    Semanalmente
+                                </option>
+                            </select>
+                        </div>
+                        <div class="grupo-dias-semana" hidden="" id="grupo-dias-semana">
+                            <span class="rotulo-dias">
+                                Dias da semana
+                            </span>
+                            <div class="dias-semana">
+                                <label>
+                                    <input name="dias_semana" type="checkbox" value="segunda" />
+                                    Seg
+                                </label>
+                                <label>
+                                    <input name="dias_semana" type="checkbox" value="terca" />
+                                    Ter
+                                </label>
+                                <label>
+                                    <input name="dias_semana" type="checkbox" value="quarta" />
+                                    Qua
+                                </label>
+                                <label>
+                                    <input name="dias_semana" type="checkbox" value="quinta" />
+                                    Qui
+                                </label>
+                                <label>
+                                    <input name="dias_semana" type="checkbox" value="sexta" />
+                                    Sex
+                                </label>
+                                <label>
+                                    <input name="dias_semana" type="checkbox" value="sabado" />
+                                    Sáb
+                                </label>
+                                <label>
+                                    <input name="dias_semana" type="checkbox" value="domingo" />
+                                    Dom
+                                </label>
+                            </div>
+                        </div>
+                        <div class="campo">
+                            <label for="data_fim_recorrencia">
+                                Repetir até
+                            </label>
+                            <input id="data_fim_recorrencia" type="date" />
+                        </div>
+                    </div>
+                </div>
+                <button class="botao-principal" id="botao-salvar" type="submit">
+                    Adicionar atividade
+                </button>
+                <button class="botao-secundario" hidden="" id="botao-cancelar-edicao" type="button">
+                    Cancelar edição
+                </button>
+                <p class="mensagem" id="mensagem">
+                </p>
+            </form>
+        </section>
+        <section class="painel-atividades">
+            <div class="titulo-secao">
+                <div>
+                    <h2>
+                        Agenda semanal
+                    </h2>
+                    <p>
+                        Visualize a distribuição das suas atividades durante a semana.
+                    </p>
+                </div>
+                <span id="contador-atividades">
+                    0 atividades
+                </span>
+            </div>
+            <div class="filtros">
+                <div class="filtro">
+                    <label for="filtro-categoria">
+                        Categoria
+                    </label>
+                    <select id="filtro-categoria">
+                        <option value="">
+                            Todas
+                        </option>
+                        <option value="Pessoal">
+                            Pessoal
+                        </option>
+                        <option value="Trabalho">
+                            Trabalho
+                        </option>
+                        <option value="Mestrado">
+                            Mestrado
+                        </option>
+                        <option value="Aula">
+                            Aula
+                        </option>
+                        <option value="Tutoria">
+                            Tutoria
+                        </option>
+                    </select>
+                </div>
+                <div class="filtro">
+                    <label for="filtro-prioridade">
+                        Prioridade
+                    </label>
+                    <select id="filtro-prioridade">
+                        <option value="">
+                            Todas
+                        </option>
+                        <option value="baixa">
+                            Baixa
+                        </option>
+                        <option value="media">
+                            Média
+                        </option>
+                        <option value="alta">
+                            Alta
+                        </option>
+                    </select>
+                </div>
+                <div class="filtro">
+                    <label for="filtro-status">
+                        Status
+                    </label>
+                    <select id="filtro-status">
+                        <option value="todas">
+                            Todas
+                        </option>
+                        <option value="pendentes">
+                            Pendentes
+                        </option>
+                        <option value="concluidas">
+                            Concluídas
+                        </option>
+                    </select>
+                </div>
+                <button class="botao-limpar-filtros" id="limpar-filtros" type="button">
+                    Limpar filtros
+                </button>
+            </div>
+            <section class="agenda-semanal">
+                <div class="agenda-toolbar">
+                    <button aria-label="Semana anterior" class="botao-navegacao" id="semana-anterior" type="button">
+                        ←
+                    </button>
+                    <div class="periodo-semana">
+                        <strong id="periodo-semana">
+                            Semana atual
+                        </strong>
+                    </div>
+                    <button class="botao-navegacao" id="semana-atual" type="button">
+                        Hoje
+                    </button>
+                    <button aria-label="Próxima semana" class="botao-navegacao" id="semana-proxima" type="button">
+                        →
+                    </button>
+                </div>
+                <div class="agenda-scroll">
+                    <div id="agenda-semana">
+                    </div>
+                </div>
+            </section>
+            <div class="titulo-lista">
+                <div>
+                    <h2>
+                        Atividades cadastradas
+                    </h2>
+                    <p>
+                        Use os controles abaixo para editar, concluir ou excluir.
+                    </p>
+                </div>
+            </div>
+            <div class="lista-atividades" id="lista-atividades">
+            </div>
+        </section>
+    </main>
+    <div aria-live="assertive" class="aviso-lembrete" hidden="" id="aviso-lembrete" role="alert">
+        <button aria-label="Fechar aviso" class="fechar-aviso" id="fechar-aviso-lembrete" type="button">
+            ×
+        </button>
+        <span class="icone-aviso">
+            🔔
+        </span>
+        <div>
+            <strong id="aviso-lembrete-titulo">
+            </strong>
+            <p id="aviso-lembrete-texto">
+            </p>
+        </div>
     </div>
-    <div class="filtros">
-     <div class="filtro">
-      <label for="filtro-categoria">
-       Categoria
-      </label>
-      <select id="filtro-categoria">
-       <option value="">
-        Todas
-       </option>
-       <option value="Pessoal">
-        Pessoal
-       </option>
-       <option value="Trabalho">
-        Trabalho
-       </option>
-       <option value="Mestrado">
-        Mestrado
-       </option>
-       <option value="Aula">
-        Aula
-       </option>
-       <option value="Tutoria">
-        Tutoria
-       </option>
-      </select>
-     </div>
-     <div class="filtro">
-      <label for="filtro-prioridade">
-       Prioridade
-      </label>
-      <select id="filtro-prioridade">
-       <option value="">
-        Todas
-       </option>
-       <option value="baixa">
-        Baixa
-       </option>
-       <option value="media">
-        Média
-       </option>
-       <option value="alta">
-        Alta
-       </option>
-      </select>
-     </div>
-     <div class="filtro">
-      <label for="filtro-status">
-       Status
-      </label>
-      <select id="filtro-status">
-       <option value="todas">
-        Todas
-       </option>
-       <option value="pendentes">
-        Pendentes
-       </option>
-       <option value="concluidas">
-        Concluídas
-       </option>
-      </select>
-     </div>
-     <button class="botao-limpar-filtros" id="limpar-filtros" type="button">
-      Limpar filtros
-     </button>
-    </div>
-    <section class="agenda-semanal">
-     <div class="agenda-toolbar">
-      <button aria-label="Semana anterior" class="botao-navegacao" id="semana-anterior" type="button">
-       ←
-      </button>
-      <div class="periodo-semana">
-       <strong id="periodo-semana">
-        Semana atual
-       </strong>
-      </div>
-      <button class="botao-navegacao" id="semana-atual" type="button">
-       Hoje
-      </button>
-      <button aria-label="Próxima semana" class="botao-navegacao" id="semana-proxima" type="button">
-       →
-      </button>
-     </div>
-     <div class="agenda-scroll">
-      <div id="agenda-semana">
-      </div>
-     </div>
-    </section>
-    <div class="titulo-lista">
-     <div>
-      <h2>
-       Atividades cadastradas
-      </h2>
-      <p>
-       Use os controles abaixo para editar, concluir ou excluir.
-      </p>
-     </div>
-    </div>
-    <div class="lista-atividades" id="lista-atividades">
-    </div>
-   </section>
-  </main>
-  <div aria-live="assertive" class="aviso-lembrete" hidden="" id="aviso-lembrete" role="alert">
-   <button aria-label="Fechar aviso" class="fechar-aviso" id="fechar-aviso-lembrete" type="button">
-    ×
-   </button>
-   <span class="icone-aviso">
-    🔔
-   </span>
-   <div>
-    <strong id="aviso-lembrete-titulo">
-    </strong>
-    <p id="aviso-lembrete-texto">
-    </p>
-   </div>
-  </div>
-  <script src="/static/js/app.js">
-  </script>
- </body>
+    <script src="/static/js/app.js">
+    </script>
+</body>
+
 </html>
